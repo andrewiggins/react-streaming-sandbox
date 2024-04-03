@@ -2,14 +2,31 @@
   "name": "react-streaming-sandbox",
   "version": "0.0.0",
   "private": true,
+  "exports": "./src/index.js",
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
-    "start": "wrangler dev"
+    "start": "wrangler dev",
+    "prepare": "husky",
+    "lint-staged": "lint-staged",
+    "lint": "prettier --no-error-on-unmatched-pattern --check **/*.{js,jsx,ts,tsx,css,md,html,yml,yaml,json}",
+    "lint:fix": "prettier --no-error-on-unmatched-pattern --write **/*.{js,jsx,ts,tsx,css,md,html,yml,yaml,json}"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0",
+    "@cloudflare/vitest-pool-workers": "^0.1.0",
+    "@cloudflare/workers-types": "^4.20240402.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
     "vitest": "1.3.0",
-    "@cloudflare/vitest-pool-workers": "^0.1.0"
+    "wrangler": "^3.45.0"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx,css,md,html,yml,yaml,json}": [
+      "prettier --write"
+    ]
+  },
+  "volta": {
+    "node": "20.12.1"
   }
 }
