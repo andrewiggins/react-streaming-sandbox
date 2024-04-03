@@ -1,0 +1,26 @@
+name: Main CI
+
+on:
+  pull_request:
+    branches:
+      - "**"
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: "npm"
+      - run: npm ci
+      - run: npm run lint
+      - run: npm pack
+      - run: mv react-streaming-sandbox-*.tgz react-streaming-sandbox.tgz
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: react-streaming-sandbox.tgz

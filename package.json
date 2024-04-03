@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "exports": "./src/index.js",
+  "files": [
+    "src",
+    "wrangler.toml"
+  ],
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
