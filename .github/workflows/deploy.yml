@@ -9,15 +9,15 @@ on:
       - wrangler.toml
 
   workflow_dispatch:
-    inputs:
-      environment:
-        description: "Choose an environment to deploy to:"
-        required: true
-        options:
-          - "dev"
-          - "staging"
-          - "prod"
-        default: "dev"
+    # inputs:
+    #   environment:
+    #     description: "Choose an environment to deploy to:"
+    #     required: true
+    #     options:
+    #       - "dev"
+    #       - "staging"
+    #       - "prod"
+    #     default: "dev"
 
 jobs:
   build:
@@ -32,4 +32,4 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: deploy --env ${{ github.event.inputs.environment }}
+          # command: deploy --env ${{ github.event.inputs.environment }}
