@@ -1,0 +1,35 @@
+name: Deploy
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ["main"]
+    paths:
+      - "src/**/*"
+      - wrangler.toml
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Choose an environment to deploy to:"
+        required: true
+        options:
+          - "dev"
+          - "staging"
+          - "prod"
+        default: "dev"
+
+jobs:
+  build:
+    uses: ./.github/workflows/main.yml
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: deploy --env ${{ github.event.inputs.environment }}
