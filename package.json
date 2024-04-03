@@ -9,9 +9,12 @@
     "start": "wrangler dev",
     "test": "vitest",
     "prepare": "husky",
+    "tsc": "tsc -p jsconfig.json",
+    "format": "prettier --no-error-on-unmatched-pattern --write **/*.{js,jsx,ts,tsx,css,md,html,yml,yaml,json}",
+    "format:check": "prettier --no-error-on-unmatched-pattern --check **/*.{js,jsx,ts,tsx,css,md,html,yml,yaml,json}",
     "lint-staged": "lint-staged",
-    "lint": "prettier --no-error-on-unmatched-pattern --check **/*.{js,jsx,ts,tsx,css,md,html,yml,yaml,json}",
-    "lint:fix": "prettier --no-error-on-unmatched-pattern --write **/*.{js,jsx,ts,tsx,css,md,html,yml,yaml,json}"
+    "lint": "npm run tsc && npm run format:check",
+    "lint:fix": "npm run format"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.1.0",
