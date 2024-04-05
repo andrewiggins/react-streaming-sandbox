@@ -15,7 +15,7 @@ export function render() {
 					<div id="root">
 						<App />
 					</div>
-					<script src="./app/entry-client.js" type="module"></script>
+					<script src="./src/entry-client.js" type="module"></script>
 				</body>
 			</html>,
 		)

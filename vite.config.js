@@ -15,7 +15,7 @@ export default defineConfig((args) => {
 							entryFileNames: "[name].js",
 						},
 						input: {
-							"entry-client": "src/app/entry-client.jsx",
+							"entry-client": "src/entry-client.jsx",
 						},
 					}
 				: undefined,

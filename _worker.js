@@ -1,4 +1,4 @@
-import { render } from "./app/entry-server.jsx";
+import { render } from "./src/entry-server.jsx";
 
 /**
  * @typedef {Required<ExportedHandler<Environment>>} RequiredExportedHandler
@@ -7,7 +7,7 @@ import { render } from "./app/entry-server.jsx";
 export default {
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
-		if (url.pathname.startsWith("/app/")) {
+		if (url.pathname.startsWith("/src/")) {
 			return env.ASSETS.fetch(request);
 		} else {
 			return new Response(render(), {
