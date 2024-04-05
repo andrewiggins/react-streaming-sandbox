@@ -1,13 +1,14 @@
 import esbuild from "esbuild";
-import { readdirSync, mkdirSync, rmSync } from "node:fs";
+import { readdirSync, mkdirSync, rmSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
 // Clean dist
-const contents = readdirSync("dist");
-contents.forEach((file) => {
-	rmSync(`dist/${file}`, { recursive: true });
-});
-mkdirSync("dist", { recursive: true });
+if (existsSync("dist")) {
+	const contents = readdirSync("dist");
+	contents.forEach((file) => {
+		rmSync(`dist/${file}`, { recursive: true });
+	});
+}
 
 // Client build
 const out = await esbuild.build({
