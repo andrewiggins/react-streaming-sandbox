@@ -1,7 +1,6 @@
 name: Deploy
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
     paths:
@@ -9,15 +8,6 @@ on:
       - wrangler.toml
 
   workflow_dispatch:
-    # inputs:
-    #   environment:
-    #     description: "Choose an environment to deploy to:"
-    #     required: true
-    #     options:
-    #       - "dev"
-    #       - "staging"
-    #       - "prod"
-    #     default: "dev"
 
 jobs:
   build:
@@ -26,11 +16,18 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: artifact
+          path: .
+      - run: ls -alh **/**
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # command: deploy --env ${{ github.event.inputs.environment }}
+          command: pages deploy

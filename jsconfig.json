@@ -10,6 +10,9 @@
 		"isolatedModules": true,
 		"esModuleInterop": true,
 		"strict": true,
+		"jsx": "react-jsx",
 		"types": ["@cloudflare/workers-types"]
-	}
+	},
+	"include": ["src"],
+	"exclude": ["node_modules"]
 }

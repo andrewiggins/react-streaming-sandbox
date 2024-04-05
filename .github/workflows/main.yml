@@ -18,9 +18,10 @@ jobs:
           cache: "npm"
       - run: npm ci
       - run: npm run lint
+      - run: npm run build
       - run: npm pack
-      - run: mv react-streaming-sandbox-*.tgz react-streaming-sandbox.tgz
+      - run: tar -xzf react-streaming-sandbox-*.tgz
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          path: react-streaming-sandbox.tgz
+          path: package
