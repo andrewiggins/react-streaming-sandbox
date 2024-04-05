@@ -1,7 +1,7 @@
 {
   "name": "react-streaming-sandbox",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.0.2",
   "private": true,
   "files": [
     "dist",
@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "wrangler pages dev",
     "start": "wrangler pages dev",
-    "build": "node build.js",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build --ssrManifest --manifest --outDir dist/app",
+    "build:server": "vite build --ssr src/_worker.js --outDir dist --emptyOutDir=false",
     "prepare": "husky",
     "tsc": "tsc -p jsconfig.json",
     "format": "prettier --no-error-on-unmatched-pattern --write **/*.{js,jsx,ts,tsx,css,md,html,yml,yaml,json}",
@@ -27,10 +29,11 @@
     "@cloudflare/workers-types": "^4.20240402.0",
     "@types/react": "^18.2.74",
     "@types/react-dom": "^18.2.24",
-    "esbuild": "^0.20.2",
+    "@vitejs/plugin-react": "^4.2.1",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.2",
     "prettier": "^3.2.5",
+    "vite": "^5.2.8",
     "wrangler": "^3.47.1"
   },
   "lint-staged": {

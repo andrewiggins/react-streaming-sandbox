@@ -1,5 +1,4 @@
 import { render } from "./app/entry-server.jsx";
-import indexHtml from "./index.html";
 
 /**
  * @typedef {Required<ExportedHandler<Environment>>} RequiredExportedHandler
@@ -11,7 +10,7 @@ export default {
 		if (url.pathname.startsWith("/app/")) {
 			return env.ASSETS.fetch(request);
 		} else {
-			return new Response(indexHtml.replace('<div id="root"></div>', `<div id="root">${render()}</div>`), {
+			return new Response(render(), {
 				headers: {
 					"content-type": "text/html; charset=utf-8",
 				},
