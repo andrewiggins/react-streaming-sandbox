@@ -10,7 +10,7 @@ export default {
 		if (url.pathname.startsWith("/src/")) {
 			return env.ASSETS.fetch(request);
 		} else {
-			return new Response(render(), {
+			return new Response(await render(), {
 				headers: {
 					"content-type": "text/html; charset=utf-8",
 				},

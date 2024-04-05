@@ -9,3 +9,7 @@ declare module "*.html" {
 	const content: string;
 	export default content;
 }
+
+declare module "react-dom/server.edge" {
+	export const renderToReadableStream: typeof import("react-dom/server").renderToReadableStream;
+}

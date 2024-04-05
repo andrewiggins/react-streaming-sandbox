@@ -28,6 +28,7 @@ const getAliases = (config) => ({
 	"react/jsx-runtime": expand(`./lib/${config.version}/react-jsx-runtime.${config.commit}.${config.buildType}.js`),
 	react: expand(`./lib/${config.version}/react.${config.commit}.${config.buildType}.js`),
 	"react-dom/server": expand(`./lib/${config.version}/react-dom-server-legacy.node.${config.commit}.production.min.js`),
+	"react-dom/server.edge": expand(`./lib/${config.version}/react-dom-server.edge.${config.commit}.production.min.js`),
 	"react-dom/client": expand(`./lib/${config.version}/react-dom.${config.commit}.${config.buildType}.js`),
 	"react-dom": expand(`./lib/${config.version}/react-dom.${config.commit}.${config.buildType}.js`),
 	scheduler: expand(`./lib/${config.version}/scheduler.${config.commit}.${config.buildType}.js`),
