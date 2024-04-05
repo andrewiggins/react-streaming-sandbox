@@ -8,8 +8,9 @@
     "wrangler.toml"
   ],
   "scripts": {
-    "dev": "wrangler pages dev",
-    "start": "wrangler pages dev",
+    "dev": "npm start",
+    "start": "conc npm:start:server \"npm:build:client -- --watch\" \"npm:build:server -- --watch\"",
+    "start:server": "wrangler pages dev",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build --ssrManifest --manifest --outDir dist/app",
     "build:server": "vite build --ssr src/_worker.js --outDir dist --emptyOutDir=false",
@@ -30,6 +31,7 @@
     "@types/react": "^18.2.74",
     "@types/react-dom": "^18.2.24",
     "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.2",
     "prettier": "^3.2.5",
