@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
@@ -35,6 +36,17 @@ const getAliases = (config) => ({
 	"react-cache": expand(`./lib/${config.version}/react-cache.${config.commit}.${config.buildType}.js`),
 });
 
+const routes = Object.fromEntries(
+	fs
+		// Read directories in src/routes
+		.readdirSync(expand("src/routes"), { withFileTypes: true })
+		.filter((dirEntry) => dirEntry.isDirectory())
+		// Filter out directories that don't have an entry-client.jsx file
+		.filter((dir) => fs.existsSync(expand("src/routes", dir.name, "entry-client.jsx")))
+		// Map to [name, path] to build { [name]: path } object
+		.map((dir) => [dir.name, path.join("src/routes", dir.name, "entry-client.jsx")]),
+);
+
 export default defineConfig((args) => {
 	return {
 		plugins: [react()],
@@ -51,9 +63,7 @@ export default defineConfig((args) => {
 						output: {
 							entryFileNames: "[name].js",
 						},
-						input: {
-							"entry-client": "src/entry-client.jsx",
-						},
+						input: routes,
 					}
 				: undefined,
 		},

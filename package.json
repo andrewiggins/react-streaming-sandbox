@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "dev": "npm start",
-    "start": "npm run build && conc npm:start:server \"npm:build:client -- --watch\" \"npm:build:server -- --watch\"",
+    "start": "npm run build && conc npm:start:server \"npm:build:client -- --watch --emptyOutDir=false\" \"npm:build:server -- --watch\"",
     "start:server": "wrangler pages dev",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build --ssrManifest --manifest --outDir dist/src",

@@ -17,8 +17,8 @@ jobs:
           node-version-file: package.json
           cache: "npm"
       - run: npm ci
-      - run: npm run lint
       - run: npm run build
+      - run: npm run lint
       - run: npm pack
       - run: tar -xzf react-streaming-sandbox-*.tgz
       - name: Upload artifact

@@ -13,3 +13,11 @@ declare module "*.html" {
 declare module "react-dom/server.edge" {
 	export const renderToReadableStream: typeof import("react-dom/server").renderToReadableStream;
 }
+
+interface Routes {
+	[routePath: string]: {
+		label: string;
+		render(props: { clientSrc: string }): Promise<string | ReadableStream>;
+		clientSrc: string;
+	};
+}
