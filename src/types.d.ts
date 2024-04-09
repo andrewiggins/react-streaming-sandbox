@@ -14,10 +14,15 @@ declare module "react-dom/server.edge" {
 	export const renderToReadableStream: typeof import("react-dom/server").renderToReadableStream;
 }
 
+interface Assets {
+	js: string;
+	css: string[];
+}
+
 interface Routes {
 	[routePath: string]: {
 		label: string;
-		render(props: { clientSrc: string }): Promise<string | ReadableStream>;
-		clientSrc: string;
+		render(props: { assets: Assets }): Promise<string | ReadableStream>;
+		assets: Assets;
 	};
 }

@@ -56,6 +56,7 @@ export default defineConfig((args) => {
 		build: {
 			minify: false,
 			sourcemap: true,
+			target: "esnext",
 			modulePreload: { polyfill: false },
 			assetsDir: "",
 			rollupOptions: !args.isSsrBuild

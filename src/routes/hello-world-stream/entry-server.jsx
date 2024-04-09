@@ -2,10 +2,10 @@ import { renderToReadableStream } from "react-dom/server.edge";
 import { App } from "./App.jsx";
 import Html from "../../components/Html.jsx";
 
-/** @param {{ clientSrc: string }} props */
-export default function render({ clientSrc }) {
+/** @param {{ assets: Assets }} props */
+export default function render({ assets }) {
 	return renderToReadableStream(
-		<Html title="Hello world renderToReadableStream" clientSrc={clientSrc}>
+		<Html title="Hello world renderToReadableStream" assets={assets}>
 			<App />
 		</Html>,
 	);

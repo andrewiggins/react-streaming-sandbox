@@ -2,12 +2,12 @@ import { renderToString } from "react-dom/server";
 import { App } from "./App.jsx";
 import Html from "../../components/Html.jsx";
 
-/** @param {{ clientSrc: string }} props */
-export default async function render({ clientSrc }) {
+/** @param {{ assets: Assets }} props */
+export default async function render({ assets }) {
 	return (
 		"<!doctype html>" +
 		renderToString(
-			<Html title="Hello world renderToString" clientSrc={clientSrc}>
+			<Html title="Hello world renderToString" assets={assets}>
 				<App />
 			</Html>,
 		)

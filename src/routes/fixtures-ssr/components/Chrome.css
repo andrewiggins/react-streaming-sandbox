@@ -1,0 +1,29 @@
+body {
+	margin: 10px;
+	padding: 0;
+	font-family: sans-serif;
+}
+
+body.light {
+	background-color: #ffffff;
+	color: #333333;
+}
+
+body.dark {
+	background-color: #000000;
+	color: #cccccc;
+}
+
+.light-loading {
+	margin: 10px 0;
+	padding: 10px;
+	background-color: #cccccc;
+	color: #666666;
+}
+
+.dark-loading {
+	margin: 10px 0;
+	padding: 10px;
+	background-color: #333333;
+	color: #999999;
+}

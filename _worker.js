@@ -2,6 +2,7 @@ import viteManifest from "./dist/src/.vite/manifest.json";
 import renderIndex from "./src/index.jsx";
 import helloWorldStringRender from "./src/routes/hello-world-string/entry-server.jsx";
 import helloWorldStreamRender from "./src/routes/hello-world-stream/entry-server.jsx";
+import fixturesSsrRender from "./src/routes/fixtures-ssr/entry-server.jsx";
 
 /** @type {(body: BodyInit | null | undefined) => Response} */
 function createHtmlResponse(body) {
@@ -12,9 +13,14 @@ function createHtmlResponse(body) {
 	});
 }
 
-/** @type {(entry: keyof typeof viteManifest) => string} */
-function getClientSrc(entry) {
-	return "/src/" + viteManifest[entry].file;
+const assetRoot = "/src/";
+/** @type {(entry: keyof typeof viteManifest) => Routes[0]["assets"]} */
+function getAssets(entry) {
+	const entryManifest = viteManifest[entry];
+	return {
+		js: assetRoot + entryManifest.file,
+		css: "css" in entryManifest ? entryManifest.css.map((file) => assetRoot + file) : [],
+	};
 }
 
 /** @type {Routes} */
@@ -22,12 +28,17 @@ const routes = {
 	"/hello-world-string": {
 		label: "Hello world string SSR",
 		render: helloWorldStringRender,
-		clientSrc: getClientSrc("src/routes/hello-world-string/entry-client.jsx"),
+		assets: getAssets("src/routes/hello-world-string/entry-client.jsx"),
 	},
 	"/hello-world-stream": {
 		label: "Hello world streaming SSR",
 		render: helloWorldStreamRender,
-		clientSrc: getClientSrc("src/routes/hello-world-stream/entry-client.jsx"),
+		assets: getAssets("src/routes/hello-world-stream/entry-client.jsx"),
+	},
+	"/fixtures-ssr": {
+		label: "Fixtures SSR",
+		render: fixturesSsrRender,
+		assets: getAssets("src/routes/fixtures-ssr/entry-client.jsx"),
 	},
 };
 
@@ -46,7 +57,7 @@ export default {
 			return createHtmlResponse(await renderIndex(routes));
 		} else if (pathname in routes) {
 			const route = routes[pathname];
-			return createHtmlResponse(await route.render({ clientSrc: route.clientSrc }));
+			return createHtmlResponse(await route.render({ assets: route.assets }));
 		} else {
 			return new Response("Not found", { status: 404 });
 		}
