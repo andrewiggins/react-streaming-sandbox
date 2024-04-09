@@ -57,16 +57,23 @@ export default defineConfig((args) => {
 			minify: false,
 			sourcemap: true,
 			target: "esnext",
-			modulePreload: { polyfill: false },
+			// Disable module preload to avoid vite guessing paths incorrectly due to our specific pathing setup
+			modulePreload: false,
 			assetsDir: "",
-			rollupOptions: !args.isSsrBuild
+			rollupOptions: args.isSsrBuild
 				? {
+						output: {
+							// inline dynamic imports on SSR to avoid weird Worker errors when
+							// dynamically importing modules
+							inlineDynamicImports: true,
+						},
+					}
+				: {
 						output: {
 							entryFileNames: "[name].js",
 						},
 						input: routes,
-					}
-				: undefined,
+					},
 		},
 	};
 });

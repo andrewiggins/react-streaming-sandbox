@@ -22,10 +22,7 @@
     "lint": "npm run tsc && npm run format:check",
     "lint:fix": "npm run format"
   },
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240402.0",
     "@types/react": "^18.2.74",

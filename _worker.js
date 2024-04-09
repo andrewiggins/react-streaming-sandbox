@@ -3,6 +3,7 @@ import renderIndex from "./src/index.jsx";
 import helloWorldStringRender from "./src/routes/hello-world-string/entry-server.jsx";
 import helloWorldStreamRender from "./src/routes/hello-world-stream/entry-server.jsx";
 import fixturesSsrRender from "./src/routes/fixtures-ssr/entry-server.jsx";
+import fixturesSsr2Render from "./src/routes/fixtures-ssr2/entry-server.jsx";
 
 /** @type {(body: BodyInit | null | undefined) => Response} */
 function createHtmlResponse(body) {
@@ -25,20 +26,25 @@ function getAssets(entry) {
 
 /** @type {Routes} */
 const routes = {
-	"/hello-world-string": {
+	"/hello-world-string/": {
 		label: "Hello world string SSR",
 		render: helloWorldStringRender,
 		assets: getAssets("src/routes/hello-world-string/entry-client.jsx"),
 	},
-	"/hello-world-stream": {
+	"/hello-world-stream/": {
 		label: "Hello world streaming SSR",
 		render: helloWorldStreamRender,
 		assets: getAssets("src/routes/hello-world-stream/entry-client.jsx"),
 	},
-	"/fixtures-ssr": {
+	"/fixtures-ssr/": {
 		label: "Fixtures SSR",
 		render: fixturesSsrRender,
 		assets: getAssets("src/routes/fixtures-ssr/entry-client.jsx"),
+	},
+	"/fixtures-ssr2/": {
+		label: "Fixtures SSR 2",
+		render: fixturesSsr2Render,
+		assets: getAssets("src/routes/fixtures-ssr2/entry-client.jsx"),
 	},
 };
 
