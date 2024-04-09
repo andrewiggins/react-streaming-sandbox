@@ -5,7 +5,9 @@ on:
     branches: ["main"]
     paths:
       - "src/**/*"
+      - _worker.js
       - wrangler.toml
+      - vite.config.js
 
   workflow_dispatch:
 
@@ -28,7 +30,7 @@ jobs:
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
-          wranglerVersion: "3.47.1"
+          wranglerVersion: "3.48.0"
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy
