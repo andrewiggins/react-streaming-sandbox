@@ -4,6 +4,7 @@ import helloWorldStringRender from "../src/routes/hello-world-string/entry-serve
 import helloWorldStreamRender from "../src/routes/hello-world-stream/entry-server.jsx";
 import fixturesSsrRender from "../src/routes/fixtures-ssr/entry-server.jsx";
 import fixturesSsr2Render from "../src/routes/fixtures-ssr2/entry-server.jsx";
+import movieAppRender from "../src/routes/movie-app/entry-server.jsx";
 
 /** @type {(body: BodyInit | null | undefined) => Response} */
 function createHtmlResponse(body) {
@@ -45,6 +46,11 @@ const routes = {
 		label: "Fixtures SSR 2",
 		render: fixturesSsr2Render,
 		assets: getAssets("src/routes/fixtures-ssr2/entry-client.jsx"),
+	},
+	"/movie-app/": {
+		label: "Movie App",
+		render: movieAppRender,
+		assets: getAssets("src/routes/movie-app/entry-client.jsx"),
 	},
 };
 
