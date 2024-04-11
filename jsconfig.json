@@ -10,9 +10,6 @@
 		"isolatedModules": true,
 		"esModuleInterop": true,
 		"strict": true,
-		"jsx": "react-jsx",
-		"types": ["@cloudflare/workers-types", "react/canary", "react-dom/canary"]
-	},
-	"include": ["src", "_worker.js"],
-	"exclude": ["node_modules"]
+		"jsx": "react-jsx"
+	}
 }

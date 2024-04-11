@@ -4,6 +4,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 const __dirname = new URL(".", import.meta.url).pathname;
+/** @type {(...args: string[]) => string} */
 const expand = (...args) => path.join(__dirname, ...args);
 
 /**

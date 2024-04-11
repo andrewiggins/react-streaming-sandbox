@@ -1,0 +1,8 @@
+{
+	"extends": "../jsconfig.json",
+	"compilerOptions": {
+		"types": ["@types/web", "react/canary", "react-dom/canary"]
+	},
+	"include": ["."],
+	"exclude": ["../node_modules"]
+}

@@ -1,9 +1,9 @@
-import viteManifest from "./dist/src/.vite/manifest.json";
-import renderIndex from "./src/index.jsx";
-import helloWorldStringRender from "./src/routes/hello-world-string/entry-server.jsx";
-import helloWorldStreamRender from "./src/routes/hello-world-stream/entry-server.jsx";
-import fixturesSsrRender from "./src/routes/fixtures-ssr/entry-server.jsx";
-import fixturesSsr2Render from "./src/routes/fixtures-ssr2/entry-server.jsx";
+import viteManifest from "../dist/src/.vite/manifest.json";
+import renderIndex from "../src/index.jsx";
+import helloWorldStringRender from "../src/routes/hello-world-string/entry-server.jsx";
+import helloWorldStreamRender from "../src/routes/hello-world-stream/entry-server.jsx";
+import fixturesSsrRender from "../src/routes/fixtures-ssr/entry-server.jsx";
+import fixturesSsr2Render from "../src/routes/fixtures-ssr2/entry-server.jsx";
 
 /** @type {(body: BodyInit | null | undefined) => Response} */
 function createHtmlResponse(body) {
