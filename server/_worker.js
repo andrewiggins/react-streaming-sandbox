@@ -54,6 +54,10 @@ const routes = {
 	},
 };
 
+// console.log(routes["/movie-app/"].assets);
+
+export { RequestController } from "./RequestController.js";
+
 /**
  * @typedef {Required<ExportedHandler<Environment>>} RequiredExportedHandler
  * @type {{ fetch: RequiredExportedHandler["fetch"] }}
@@ -63,7 +67,10 @@ export default {
 		const url = new URL(request.url);
 		const pathname = url.pathname;
 
-		if (pathname === "/favicon.ico" || pathname.startsWith("/src/")) {
+		if (pathname === "/request-controller") {
+			const rc = env.REQUEST_CONTROLLER.get(env.REQUEST_CONTROLLER.newUniqueId());
+			return rc.fetch(request);
+		} else if (pathname === "/favicon.ico" || pathname.startsWith("/src/")) {
 			return env.ASSETS.fetch(request);
 		} else if (pathname === "/") {
 			return createHtmlResponse(await renderIndex(routes));

@@ -62,18 +62,23 @@ export default defineConfig((args) => {
 			modulePreload: false,
 			assetsDir: "",
 			rollupOptions: args.isSsrBuild
-				? {
+				? // SSR Build
+					{
 						output: {
 							// inline dynamic imports on SSR to avoid weird Worker errors when
 							// dynamically importing modules
 							inlineDynamicImports: true,
 						},
 					}
-				: {
+				: // Client Build
+					{
 						output: {
 							entryFileNames: "[name].js",
 						},
-						input: routes,
+						input: {
+							...routes,
+							"request-controller": expand("src/request-controller/index.js"),
+						},
 					},
 		},
 	};
