@@ -1,5 +1,5 @@
 import { Component, Suspense } from "react";
-import Html from "../../../components/Html.jsx";
+import Html from "../../../Html.jsx";
 import Spinner from "./Spinner.jsx";
 import "./styles.css";
 import MovieListPage from "./MovieListPage.jsx";

@@ -1,5 +1,5 @@
 import { renderToReadableStream } from "react-dom/server.edge";
-import Html from "./components/Html.jsx";
+import Html from "./Html.jsx";
 
 /** @param {{ routes: Routes }} props */
 function Index({ routes }) {

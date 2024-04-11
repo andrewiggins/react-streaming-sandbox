@@ -1,6 +1,6 @@
 import { renderToString } from "react-dom/server";
 import { App } from "./App.jsx";
-import Html from "../../components/Html.jsx";
+import Html from "../../Html.jsx";
 
 /** @param {{ assets: Assets }} props */
 export default async function render({ assets }) {
