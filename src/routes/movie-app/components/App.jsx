@@ -4,10 +4,10 @@ import Spinner from "./Spinner.jsx";
 import "./styles.css";
 import MovieListPage from "./MovieListPage.jsx";
 
-/** @param {{ assets: Assets }} props */
-export default function App({ assets }) {
+/** @param {RootProps} props */
+export default function App(props) {
 	return (
-		<Html assets={assets} title="Movie App">
+		<Html {...props} title="Movie App">
 			<Suspense fallback={<Spinner size="large" />}>
 				<ErrorBoundary FallbackComponent={ErrorPage}>
 					<MovieListPage loadingId={null} onMovieClick={(id) => console.log("clicked movie", id)} />

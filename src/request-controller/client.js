@@ -1,8 +1,11 @@
-/** @type {() => Promise<WebSocket>} */
-function createWebSocket() {
+import { RCIDName } from "../../server/constants.js";
+
+/** @type {(path: string) => Promise<WebSocket>} */
+function createWebSocket(path) {
 	return new Promise((resolve, reject) => {
 		const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
-		const websocket = new WebSocket(wss + "localhost:8787/request-controller");
+		const wssURL = new URL(wss + "localhost:8787" + path);
+		const websocket = new WebSocket(wssURL);
 		const cleanup = () => {
 			websocket.removeEventListener("open", onOpen);
 			websocket.removeEventListener("close", onClose);
@@ -28,7 +31,8 @@ function createWebSocket() {
 	});
 }
 
-export async function createRequestControllerClient() {
-	const websocket = await createWebSocket();
+/** @type {(rcId: string) => Promise<WebSocket>} */
+export async function createRequestControllerClient(rcId) {
+	const websocket = await createWebSocket(`/request-controller?${RCIDName}=${rcId}`);
 	return websocket;
 }

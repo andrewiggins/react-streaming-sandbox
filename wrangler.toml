@@ -1,6 +1,6 @@
 name = "react-streaming-sandbox"
 pages_build_output_dir = "dist"
-compatibility_date = "2024-04-02"
+compatibility_date = "2024-04-03"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
@@ -13,8 +13,8 @@ compatibility_flags = ["nodejs_compat"]
 # Add production environment variables here
 
 [[durable_objects.bindings]]
-name = "REQUEST_CONTROLLER"
-class_name = "RequestController"
+name = "RequestControllerClient"
+class_name = "RequestControllerClientConnection"
 
 # [[migrations]]
 # tag = "v1"

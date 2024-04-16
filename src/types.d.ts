@@ -37,15 +37,26 @@ declare module "react-dom/server.edge" {
 	): Promise<ReactDOMServerReadableStream>;
 }
 
+interface Window {
+	RCID?: string;
+}
+
 interface Assets {
 	js: string;
 	css: string[];
 }
 
+type DurableObjectId = import("@cloudflare/workers-types").DurableObjectId;
+
+interface RootProps {
+	assets: Assets;
+	rcId: DurableObjectId;
+}
+
 interface Routes {
 	[routePath: string]: {
 		label: string;
-		render(props: { assets: Assets }): Promise<string | ReadableStream>;
+		render(props: RootProps): Promise<string | ReadableStream>;
 		assets: Assets;
 	};
 }

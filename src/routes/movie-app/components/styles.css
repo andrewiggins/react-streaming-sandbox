@@ -167,7 +167,7 @@ body {
 	background-color: var(--color-buttonBg);
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: var(--pt);
-	height: calc(var(--pt) * 9);
+	min-height: calc(var(--pt) * 9);
 	padding: var(--pt) calc(var(--pt) * 2);
 	cursor: pointer;
 	transition: transform 0.05s ease-in 0.05s;

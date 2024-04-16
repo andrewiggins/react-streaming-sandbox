@@ -1,13 +1,15 @@
 import { createRequestControllerClient } from "./client.js";
 
 async function main() {
-	const rcClient = await createRequestControllerClient();
+	if (!window.RCID) return;
+
+	const rcClient = await createRequestControllerClient(window.RCID);
 
 	// Simple test
 	rcClient.addEventListener("message", (event) => {
-		console.log(event.data);
+		console.log(event);
 	});
-	rcClient.send("Hello, world!");
+	rcClient.send(`{"type":"ping"}`);
 
 	/** @type {any}*/ (globalThis).rcClient;
 }

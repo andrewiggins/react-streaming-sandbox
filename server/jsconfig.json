@@ -1,8 +1,8 @@
 {
 	"extends": "../jsconfig.json",
 	"compilerOptions": {
-		"types": ["@cloudflare/workers-types"]
+		"types": ["@cloudflare/workers-types", "react/canary"]
 	},
-	"include": ["../src/types.d.ts", "."],
+	"include": ["../src/types.d.ts", "../src/request-controller/types.d.ts", "../src/routes/movie-app/types.d.ts", "."],
 	"exclude": ["../node_modules"]
 }
