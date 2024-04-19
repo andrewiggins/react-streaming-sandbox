@@ -1,4 +1,3 @@
-import { RpcTarget } from "cloudflare:workers";
 import debug from "debug";
 
 const log = debug("RSS:RequestController");
@@ -19,12 +18,12 @@ export class MockRequest {
 	 * @param {{ latency: number; paused: boolean; }} [mockOptions] Mock request options
 	 */
 	constructor(input, init = { method: "GET" }, mockOptions = { latency: 3000, paused: false }) {
-		this.request = new Request(input, init);
+		const request = new Request(input, init);
 
 		/** @type {string} */
 		this.id = `${++MockRequest.id}`;
 		/** @type {string} Display name of the request */
-		this.name = `${this.request.method} ${this.request.url}`;
+		this.name = `${request.method} ${request.url}`;
 		/** @type {number | null} When this request should resolve. If null, request is paused and not scheduled to complete */
 		this.expiresAt = mockOptions.paused ? null : Date.now() + mockOptions.latency;
 		/** @type {number} Total time in milliseconds this request should wait */
@@ -59,13 +58,13 @@ export class MockRequest {
 			expiresAt: this.expiresAt,
 			latency: this.latency,
 			elapsedTime: this.elapsedTime,
-			request: {
-				method: this.request.method.toString(),
-				url: this.request.url.toString(),
-				headers: Object.fromEntries(this.request.headers.entries()),
-				redirect: this.request.redirect,
-				integrity: this.request.integrity,
-			},
+			// request: {
+			// 	method: this.request.method.toString(),
+			// 	url: this.request.url.toString(),
+			// 	headers: Object.fromEntries(this.request.headers.entries()),
+			// 	redirect: this.request.redirect,
+			// 	integrity: this.request.integrity,
+			// },
 		};
 	}
 }
@@ -102,20 +101,15 @@ export class MockRequestEvent extends Event {
 	}
 }
 
-export class RequestController extends RpcTarget {
+/** @extends {EventTarget<MockRequestEvents>} */
+export class RequestController extends EventTarget {
 	/**
 	 * @typedef {{ expiresAt: number; timeoutId: ReturnType<typeof setTimeout>; }} MockFetchTimer
 	 * @type {MockFetchTimer | null}
 	 */
 	#timer = null;
 
-	/**
-	 * @typedef {(event: string | MockRequestEvent<MockRequestEventType>) => void} Listener
-	 * @type {Map<string, Listener[]>}
-	 */
-	listeners = new Map();
-
-	/** @param {DurableObjectId} rcId The ID for the RequestControllerClientConnection durable object */
+	/** @param {string} rcId The ID for the RequestControllerClientConnection durable object */
 	constructor(rcId) {
 		super();
 		/** @type {boolean} */
@@ -125,12 +119,6 @@ export class RequestController extends RpcTarget {
 		/** @type {Map<string, MockRequest>} */
 		this.requests = new Map();
 		this.rcId = rcId;
-
-		// /** @type {EventTarget<MockRequestEvents>} */
-		// this.eventTarget = new EventTarget();
-		// this.addEventListener = this.eventTarget.addEventListener.bind(this.eventTarget);
-		// this.removeEventListener = this.eventTarget.removeEventListener.bind(this.eventTarget);
-		// this.dispatchEvent = this.eventTarget.dispatchEvent.bind(this.eventTarget);
 	}
 
 	// Actual fetch signature:
@@ -289,41 +277,5 @@ export class RequestController extends RpcTarget {
 		}, timeout);
 		log("scheduleUpdate: created timer (%d) for %d ms", timeoutId, timeout);
 		this.#timer = { timeoutId, expiresAt: nextExpiration };
-	}
-
-	/**
-	 * @param {MockRequestEventType} type
-	 * @param {Listener} listener
-	 */
-	addEventListener(type, listener) {
-		console.log("addEventListener %s", type, listener);
-		const listeners = this.listeners.get(type) ?? [];
-		listeners.push(listener);
-		this.listeners.set(type, listeners);
-	}
-
-	/**
-	 * @param {MockRequestEventType} type
-	 * @param {Listener} listener
-	 */
-	removeEventListener(type, listener) {
-		const listeners = this.listeners.get(type) ?? [];
-		const index = listeners.indexOf(listener);
-		if (index >= 0) {
-			listeners.splice(index, 1);
-		}
-	}
-
-	/**
-	 * @param {MockRequestEvent<MockRequestEventType>} event
-	 */
-	async dispatchEvent(event) {
-		console.log('dispatchEvent "%s"', event.type);
-
-		const listeners = this.listeners.get(event.type) ?? [];
-		for (let listener of listeners) {
-			console.log('dispatchEvent "%s" to listener', event.type, listener);
-			await listener(event);
-		}
 	}
 }

@@ -2,7 +2,6 @@ interface Environment {
 	ASSETS: {
 		fetch: typeof import("@cloudflare/workers-types").fetch;
 	};
-	RequestControllerClient: DurableObjectNamespace<import("./RequestControllerClientConnection.js").RequestControllerClientConnection>;
 }
 
 declare var window: undefined;

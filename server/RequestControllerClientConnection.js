@@ -47,28 +47,8 @@ export class RequestControllerClientConnection extends DurableObject {
 	 */
 	constructor(ctx, env) {
 		super(ctx, env);
-		/** @type {RpcStub<RequestController> | null} */
-		this.requestController = null;
 		/** @type {Set<WebSocket>} */
 		this.sessions = new Set();
-	}
-
-	// /** @type {(requestController: RpcStub<RequestController>) => Promise<void>} */
-	// async setRequestController(requestController) {
-	// 	// TODO: Does this work??
-	// 	log("setRequestController %s", requestController.rcId ?? "null");
-	// 	this.requestController = requestController;
-	// 	// await this.requestController.addEventListener("new-request", async (event) => {
-	// 	// 	await this.sendRequestEvent(event);
-	// 	// });
-	// 	await this.requestController.addEventListener("new-request", this.sendRequestEvent);
-	// 	await this.requestController.addEventListener("request-complete", this.sendRequestEvent);
-	// }
-
-	/** @type {(getRequestState: () => Promise<string>) => Promise<void>} */
-	async initialize(getRequestState) {
-		console.log("initialize", getRequestState);
-		this.getRequestState = /** @type {RpcStub<() => string>} */ (getRequestState);
 	}
 
 	/** @type {(request: Request) => Promise<Response>} */
@@ -99,11 +79,6 @@ export class RequestControllerClientConnection extends DurableObject {
 				// (run the `constructor`) and deliver the message to the appropriate handler.
 				this.ctx.acceptWebSocket(server);
 				this.sessions.add(server);
-
-				console.log("======= START");
-				console.log(this.getRequestState);
-				console.log(await this.getRequestState?.());
-				console.log("======= END");
 
 				return new Response(null, {
 					status: 101,

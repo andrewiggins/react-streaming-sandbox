@@ -46,17 +46,15 @@ interface Assets {
 	css: string[];
 }
 
-type DurableObjectId = import("@cloudflare/workers-types").DurableObjectId;
-
 interface RootProps {
 	assets: Assets;
-	rcId: DurableObjectId;
+	rcId: string;
 }
 
 interface Routes {
 	[routePath: string]: {
 		label: string;
-		render(props: RootProps): Promise<string | ReadableStream>;
+		render(props: RootProps): Promise<string | import("react-dom/server.edge").ReactDOMServerReadableStream>;
 		assets: Assets;
 	};
 }
