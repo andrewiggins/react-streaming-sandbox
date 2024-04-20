@@ -82,6 +82,7 @@ export class MockRequest {
  */
 
 /**
+ * @extends {Event<Type>}
  * @template {MockRequestEventType} Type
  */
 // Exported primarily for typing
@@ -92,6 +93,12 @@ export class MockRequestEvent extends Event {
 	 */
 	constructor(type, request) {
 		super(type);
+
+		// Bleh, TypeScript hack
+		try {
+			this.type = type;
+		} catch (e) {}
+
 		this.request = request;
 	}
 

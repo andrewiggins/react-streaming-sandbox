@@ -64,6 +64,8 @@ server.listen(port);
 
 const webSocketLog = debug("RSS:webSocket");
 
+/** @typedef {{ type: "init"; requests: Array<[string, MockRequest]>; }} InitEvent */
+
 /** @type {(ws: import('ws').WebSocket, url: URL) => void} */
 function setupWebSocket(ws, url) {
 	const rcId = url.searchParams.get(RCIDName);
@@ -100,7 +102,9 @@ function setupWebSocket(ws, url) {
 		ws.send(JSON.stringify(event));
 	});
 
-	ws.send(JSON.stringify({ type: "init", requests: Array.from(rc.requests.entries()) }));
+	/** @type {InitEvent} */
+	const initEvent = { type: "init", requests: Array.from(rc.requests.entries()) };
+	ws.send(JSON.stringify(initEvent));
 }
 
 /** @type {(rcId: string, ws: import('ws').WebSocket, message: Buffer[] | ArrayBuffer | string) => Promise<void>} */

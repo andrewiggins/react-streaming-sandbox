@@ -1,3 +1,5 @@
+import { MockRequestEvent } from "../../server/RequestController.js";
+
 const hasOwn = Object.prototype.hasOwnProperty;
 
 /**
@@ -199,7 +201,7 @@ function afterNextFrame(cb) {
 	requestAnimationFrame(() => requestAnimationFrame(cb));
 }
 
-class MockFetchDebugger extends HTMLElement {
+export class MockFetchDebugger extends HTMLElement {
 	/** @type {number} */
 	#durationMs;
 	/** @type {boolean} */
@@ -385,9 +387,9 @@ class MockFetchDebugger extends HTMLElement {
 	/** @type {(request: MockRequest) => void} */
 	onToggleRequest(request) {
 		if (request.expiresAt == null) {
-			this.dispatchEvent(new CustomEvent("request-resume", { detail: { requestId: request.id } }));
+			this.dispatchEvent(new MockRequestEvent("request-resume", request));
 		} else {
-			this.dispatchEvent(new CustomEvent("request-pause", { detail: { requestId: request.id } }));
+			this.dispatchEvent(new MockRequestEvent("request-pause", request));
 		}
 	}
 
@@ -430,6 +432,7 @@ class MockFetchDebugger extends HTMLElement {
 		// Update requests already in list
 		const inflightList = shadowRoot.getElementById("inflight");
 		if (!inflightList) throw new Error("inflightList not found");
+
 		for (const listItem of Array.from(inflightList.children)) {
 			const requestId = listItem.getAttribute("data-req-id");
 			if (!requestId) throw new Error("requestId not found");
