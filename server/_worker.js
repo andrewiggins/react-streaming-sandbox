@@ -12,11 +12,13 @@ import { fetchStore } from "./fetch.js";
 
 debug.enable("RSS:*");
 const workerLog = debug("RSS:_worker");
-const webSocketLog = debug("RSS:webSocket");
 
-/** @type {(body: BodyInit | null | undefined) => Response} */
+/**
+ * @typedef {ReadableStream | string | ArrayBuffer | Blob | URLSearchParams | FormData} BodyInit
+ * @type {(body: BodyInit | null | undefined) => Response}
+ */
 function createHtmlResponse(body) {
-	return new Response(body, {
+	return new Response(/** @type {any} */ (body), {
 		headers: {
 			"content-type": "text/html; charset=utf-8",
 		},
@@ -63,113 +65,111 @@ const routes = {
 };
 
 /** @type {Map<string, RequestController>} */
-const requestControllers = new Map();
+export const requestControllers = new Map();
 
-export { RequestControllerClientConnection } from "./RequestControllerClientConnection.js";
+// export { RequestControllerClientConnection } from "./RequestControllerClientConnection.js";
 
 /**
- * @typedef {Required<ExportedHandler<Environment>>} RequiredExportedHandler
- * @type {{ fetch: RequiredExportedHandler["fetch"] }}
+ * @typedef {import('@cloudflare/workers-types').ExportedHandler<T>} ExportedHandler
+ * @template T
  */
+
 export default {
-	/** @type {RequiredExportedHandler["fetch"]} */
+	/** @type {(request: Request, env: Environment, ctx: any) => Promise<Response>} */
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
 		const pathname = url.pathname;
 
-		// setTimeout(() => {
-		// 	console.log("=".repeat(40));
-		// }, 1);
-
 		if (pathname === "/request-controller") {
-			return handleErrors(request, async () => {
-				const url = new URL(request.url);
+			throw new Error('Unexpected "/request-controller" request.');
+			// return handleErrors(request, async () => {
+			// 	const url = new URL(request.url);
 
-				const rcId = url.searchParams.get(RCIDName);
-				if (!rcId) {
-					return new Response("Missing rcId param", { status: 400 });
-				}
+			// 	const rcId = url.searchParams.get(RCIDName);
+			// 	if (!rcId) {
+			// 		return new Response("Missing rcId param", { status: 400 });
+			// 	}
 
-				const rc = requestControllers.get(rcId);
-				if (!rc) {
-					return new Response("No request controller found", { status: 404 });
-				}
+			// 	const rc = requestControllers.get(rcId);
+			// 	if (!rc) {
+			// 		return new Response("No request controller found", { status: 404 });
+			// 	}
 
-				// Expect to receive a WebSocket Upgrade request.
-				// If there is one, accept the request and return a WebSocket Response.
-				const upgradeHeader = request.headers.get("Upgrade");
-				if (!upgradeHeader || upgradeHeader !== "websocket") {
-					return new Response("Expected Upgrade: websocket", { status: 426 });
-				}
+			// 	// Expect to receive a WebSocket Upgrade request.
+			// 	// If there is one, accept the request and return a WebSocket Response.
+			// 	const upgradeHeader = request.headers.get("Upgrade");
+			// 	if (!upgradeHeader || upgradeHeader !== "websocket") {
+			// 		return new Response("Expected Upgrade: websocket", { status: 426 });
+			// 	}
 
-				// Creates two ends of a WebSocket connection.
-				const webSocketPair = new WebSocketPair();
-				const [client, server] = Object.values(webSocketPair);
+			// 	// Creates two ends of a WebSocket connection.
+			// 	const webSocketPair = new WebSocketPair();
+			// 	const [client, server] = Object.values(webSocketPair);
 
-				webSocketLog("Accepted WebSocket connection %s", rcId);
-				server.accept();
+			// 	webSocketLog("Accepted WebSocket connection %s", rcId);
+			// 	server.accept();
 
-				server.addEventListener("open", () => {
-					webSocketLog("Connection opened %s", rcId);
-				});
-				server.addEventListener("message", async (event) => {
-					await handleWebSocketMessage(rcId, server, event.data);
-				});
-				server.addEventListener("close", (event) => {
-					webSocketLog("Closing %s", rcId);
-					// TODO: Should I do this??
-					// requestControllers.delete(rcId);
-				});
-				server.addEventListener("error", (event) => {
-					webSocketLog("Error: %s", event.error.stack);
-					// TODO: Should I do this??
-					// requestControllers.delete(rcId);
-				});
+			// 	server.addEventListener("open", () => {
+			// 		webSocketLog("Connection opened %s", rcId);
+			// 	});
+			// 	server.addEventListener("message", async (event) => {
+			// 		await handleWebSocketMessage(rcId, server, event.data);
+			// 	});
+			// 	server.addEventListener("close", (event) => {
+			// 		webSocketLog("Closing %s", rcId);
+			// 		// TODO: Should I do this??
+			// 		// requestControllers.delete(rcId);
+			// 	});
+			// 	server.addEventListener("error", (event) => {
+			// 		webSocketLog("Error: %s", event.error.stack);
+			// 		// TODO: Should I do this??
+			// 		// requestControllers.delete(rcId);
+			// 	});
 
-				rc.addEventListener("new-request", async (event) => {
-					let strEvent = "";
-					try {
-						webSocketLog("Serializing new request %s", event.request.id);
-						strEvent = JSON.stringify(event);
+			// 	rc.addEventListener("new-request", async (event) => {
+			// 		let strEvent = "";
+			// 		try {
+			// 			webSocketLog("Serializing new request %s", event.request.id);
+			// 			strEvent = JSON.stringify(event);
 
-						// setTimeout(() => {
-						try {
-							console.log("=".repeat(40));
-							webSocketLog("Sending new request %s", strEvent);
-							server.send(strEvent);
-						} catch (e) {
-							webSocketLog("Send Error: %s", e.stack);
-						}
-						// }, 1);
-					} catch (e) {
-						webSocketLog("JSON Error: %s", e.stack);
-					}
-				});
-				rc.addEventListener("request-complete", async (event) => {
-					let strEvent = "";
-					try {
-						webSocketLog("Serializing request complete %s", event.request.id);
-						strEvent = JSON.stringify(event);
+			// 			// setTimeout(() => {
+			// 			try {
+			// 				console.log("=".repeat(40));
+			// 				webSocketLog("Sending new request %s", strEvent);
+			// 				server.send(strEvent);
+			// 			} catch (e) {
+			// 				webSocketLog("Send Error: %s", e.stack);
+			// 			}
+			// 			// }, 1);
+			// 		} catch (e) {
+			// 			webSocketLog("JSON Error: %s", e.stack);
+			// 		}
+			// 	});
+			// 	rc.addEventListener("request-complete", async (event) => {
+			// 		let strEvent = "";
+			// 		try {
+			// 			webSocketLog("Serializing request complete %s", event.request.id);
+			// 			strEvent = JSON.stringify(event);
 
-						// setTimeout(() => {
-						try {
-							console.log("=".repeat(40));
-							webSocketLog("Sending request complete %s", strEvent);
-							server.send(strEvent);
-						} catch (e) {
-							webSocketLog("Send Error: %s", e.stack);
-						}
-						// }, 1);
-					} catch (e) {
-						webSocketLog("JSON Error: %s", e.stack);
-					}
-				});
+			// 			// setTimeout(() => {
+			// 			try {
+			// 				console.log("=".repeat(40));
+			// 				webSocketLog("Sending request complete %s", strEvent);
+			// 				server.send(strEvent);
+			// 			} catch (e) {
+			// 				webSocketLog("Send Error: %s", e.stack);
+			// 			}
+			// 			// }, 1);
+			// 		} catch (e) {
+			// 			webSocketLog("JSON Error: %s", e.stack);
+			// 		}
+			// 	});
 
-				return new Response(null, {
-					status: 101,
-					webSocket: client,
-				});
-			});
+			// 	return new Response(null, {
+			// 		status: 101,
+			// 		webSocket: client,
+			// 	});
+			// });
 		} else if (pathname === "/favicon.ico" || pathname.startsWith("/src/")) {
 			return env.ASSETS.fetch(request);
 		} else if (pathname === "/") {
@@ -198,72 +198,31 @@ export default {
 	},
 };
 
-/** @type {(rcId: string, ws: WebSocket, message: ArrayBuffer | string) => Promise<void>} */
-async function handleWebSocketMessage(rcId, ws, message) {
-	try {
-		/** @type {RequestControllerClientEvent | { type: "ping" } | undefined} */
-		let event;
-		try {
-			event = JSON.parse(message.toString());
-		} catch {}
-
-		const requestController = requestControllers.get(rcId);
-
-		if (!event) {
-			webSocketLog(`Received ${JSON.stringify(message)} which is not an JSON object. Ignoring...`);
-			return;
-		} else if (!requestController) {
-			webSocketLog(`Received ${JSON.stringify(event?.type ?? message)} but no request controller set. Ignoring...`);
-			return;
-		}
-
-		webSocketLog(`Received message %s`, event);
-
-		// Handle the message.
-		if (event.type === "ping") {
-			webSocketLog("Sending pong...");
-			ws.send(JSON.stringify({ type: "pong" }));
-		} else if (event.type === "request-pause") {
-			requestController.pause(event.requestId);
-		} else if (event.type === "request-resume") {
-			requestController.resume(event.requestId);
-		} else if (event.type === "pause-new-requests") {
-			requestController.areNewRequestsPaused = event.value;
-		}
-	} catch (e) {
-		// Report any exceptions directly back to the client. As with our handleErrors() this
-		// probably isn't what you'd want to do in production, but it's convenient when testing.
-		const error = /** @type {Error} */ (e);
-		webSocketLog("Error: %s", error.stack);
-		ws.send(JSON.stringify({ error: error.stack }));
-	}
-}
-
-/**
- * `handleErrors()` is a little utility function that can wrap an HTTP request
- * handler in a try/catch and return errors to the client. You probably wouldn't
- * want to use this in production code but it is convenient when debugging and
- * iterating.
- * @param {Request} request
- * @param {() => Promise<Response>} func
- * @returns {Promise<Response>}
- */
-async function handleErrors(request, func) {
-	try {
-		return await func();
-	} catch (err) {
-		const error = /** @type {Error} */ (err);
-		if (request.headers.get("Upgrade") == "websocket") {
-			// Annoyingly, if we return an HTTP error in response to a WebSocket request, Chrome devtools
-			// won't show us the response body! So... let's send a WebSocket response with an error
-			// frame instead.
-			let pair = new WebSocketPair();
-			pair[1].accept();
-			pair[1].send(JSON.stringify({ error: error.stack }));
-			pair[1].close(1011, "Uncaught exception during session setup");
-			return new Response(null, { status: 101, webSocket: pair[0] });
-		} else {
-			return new Response(error.stack, { status: 500 });
-		}
-	}
-}
+// /**
+//  * `handleErrors()` is a little utility function that can wrap an HTTP request
+//  * handler in a try/catch and return errors to the client. You probably wouldn't
+//  * want to use this in production code but it is convenient when debugging and
+//  * iterating.
+//  * @param {Request} request
+//  * @param {() => Promise<Response>} func
+//  * @returns {Promise<Response>}
+//  */
+// async function handleErrors(request, func) {
+// 	try {
+// 		return await func();
+// 	} catch (err) {
+// 		const error = /** @type {Error} */ (err);
+// 		if (request.headers.get("Upgrade") == "websocket") {
+// 			// Annoyingly, if we return an HTTP error in response to a WebSocket request, Chrome devtools
+// 			// won't show us the response body! So... let's send a WebSocket response with an error
+// 			// frame instead.
+// 			let pair = new WebSocketPair();
+// 			pair[1].accept();
+// 			pair[1].send(JSON.stringify({ error: error.stack }));
+// 			pair[1].close(1011, "Uncaught exception during session setup");
+// 			return new Response(null, { status: 101, webSocket: pair[0] });
+// 		} else {
+// 			return new Response(error.stack, { status: 500 });
+// 		}
+// 	}
+// }

@@ -13,12 +13,14 @@ export class MockRequest {
 	#rejecter = noop;
 
 	/**
-	 * @param {RequestInfo} input Mock URL
+	 * @param {string | URL | Request} input Mock URL
 	 * @param {RequestInit} [init] Mock request options
 	 * @param {{ latency: number; paused: boolean; }} [mockOptions] Mock request options
 	 */
 	constructor(input, init = { method: "GET" }, mockOptions = { latency: 3000, paused: false }) {
-		const request = new Request(input, init);
+		// const request = new Request(input, init);
+		// this.request = request;
+		const request = { method: init.method, url: input };
 
 		/** @type {string} */
 		this.id = `${++MockRequest.id}`;
@@ -123,7 +125,7 @@ export class RequestController extends EventTarget {
 
 	// Actual fetch signature:
 	// declare function fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
-	/** @type {(input: RequestInfo, requestInit?: RequestInit) => Promise<Response>} */
+	/** @type {(input: string | URL | Request, requestInit?: RequestInit) => Promise<Response>} */
 	fetch = async (input, requestInit) => {
 		log("fetch %o %o", input, requestInit);
 
