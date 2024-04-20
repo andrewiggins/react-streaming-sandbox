@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240402.0",
+    "@types/debug": "^4.1.12",
     "@types/react": "^18.2.74",
     "@types/react-dom": "^18.2.24",
     "@types/web": "^0.0.142",

@@ -48,7 +48,7 @@ interface Assets {
 
 interface RootProps {
 	assets: Assets;
-	rcId: string;
+	rcId?: string;
 }
 
 interface Routes {

@@ -1,4 +1,6 @@
-type RequestControllerClientEventType = "request-pause" | "request-resume" | "pause-new-requests";
+type MockRequest = import("../../server/RequestController.js").MockRequest;
+
+type RequestControllerClientEventType = "init" | "request-pause" | "request-resume" | "pause-new-requests";
 
 interface BaseRequestControllerClientEvent<T extends RequestControllerClientEventType> extends Event {
 	type: T;
@@ -13,3 +15,7 @@ interface PauseNewRequestsEvent extends BaseRequestControllerClientEvent<"pause-
 }
 
 type RequestControllerClientEvent = ChangeRequestStateEvent | PauseNewRequestsEvent;
+
+interface Window {
+	RCID?: string;
+}
