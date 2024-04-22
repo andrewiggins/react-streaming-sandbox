@@ -10,7 +10,7 @@ export default function Html({ title, children, assets, rcId }) {
 			</head>
 			<body>
 				{rcId && <script type="text/javascript" dangerouslySetInnerHTML={{ __html: `window.RCID = "${rcId.toString()}"` }}></script>}
-				{rcId && <script type="text/javascript" src="/src/request-controller.js"></script>}
+				{rcId && <script type="text/javascript" src="/src/fetch-debugger.js"></script>}
 				<script type="text/javascript" dangerouslySetInnerHTML={{ __html: 'console.log("pre-root");' }}></script>
 				<div id="root">{children}</div>
 				<script type="text/javascript" dangerouslySetInnerHTML={{ __html: 'console.log("post-root");' }}></script>

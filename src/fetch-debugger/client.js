@@ -1,4 +1,4 @@
-import { RCIDName } from "../../server/constants.js";
+import { RCIDName } from "../../shared/constants.js";
 
 /** @type {(path: string) => Promise<WebSocket>} */
 function createWebSocket(path) {

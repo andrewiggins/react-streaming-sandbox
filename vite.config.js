@@ -78,7 +78,7 @@ export default defineConfig((args) => {
 						},
 						input: {
 							...routes,
-							"request-controller": expand("src/request-controller/index.js"),
+							"fetch-debugger": expand("src/fetch-debugger/index.js"),
 						},
 					},
 		},

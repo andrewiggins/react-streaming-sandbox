@@ -5,7 +5,7 @@ import { WebSocketServer } from "ws";
 import { getRequest, setResponse } from "./request-transform.js";
 import worker, { requestControllers } from "./_worker.js";
 import debug from "debug";
-import { RCIDName } from "./constants.js";
+import { RCIDName } from "../shared/constants.js";
 import { MockRequestEvent } from "../shared/RequestController.js";
 
 const __dirname = new URL(".", import.meta.url).pathname;

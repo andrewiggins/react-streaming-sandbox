@@ -6,10 +6,11 @@
 	"include": [
 		"../src/types.d.ts",
 		"../shared/types.d.ts",
-		"../src/request-controller/types.d.ts",
+		"../src/fetch-debugger/types.d.ts",
 		"../src/routes/movie-app/types.d.ts",
 		".",
-		"../shared/RequestController.js"
+		"../shared/RequestController.js",
+		"../shared/constants.js"
 	],
 	"exclude": ["../node_modules"]
 }
