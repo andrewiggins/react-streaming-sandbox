@@ -176,7 +176,7 @@ export default {
 		} else if (pathname in routes) {
 			const route = routes[pathname];
 			const rcId = crypto.randomUUID();
-			const rc = new RequestController(rcId);
+			const rc = new RequestController(rcId, "server");
 			requestControllers.set(rcId, rc);
 
 			return fetchStore.run(rc.fetch, async () => {

@@ -8,26 +8,21 @@ let mockRequestId = 0;
 /**
  * @param {string | URL | Request} input Mock URL
  * @param {RequestInit} [init] Mock request options
- * @param {{ latency: number; paused: boolean; }} [mockOptions] Mock request options
+ * @param {{ source: string; latency: number; paused: boolean; }} [mockOptions] Mock request options
  * @returns {MockRequest}
  */
-export function createMockRequest(input, init = { method: "GET" }, mockOptions = { latency: 3000, paused: false }) {
+export function createMockRequest(input, init = { method: "GET" }, mockOptions = { source: "unknown", latency: 3000, paused: false }) {
 	// const request = new Request(input, init);
 	// this.request = request;
 	const request = { method: init.method, url: input };
+	const { source, latency, paused } = mockOptions;
 
-	/** @type {string} */
-	const id = `${++mockRequestId}`;
-	/** @type {string} Display name of the request */
+	const id = `${source}:${++mockRequestId}`;
 	const name = `${request.method} ${request.url}`;
-	/** @type {number | null} When this request should resolve. If null, request is paused and not scheduled to complete */
-	const expiresAt = mockOptions.paused ? null : Date.now() + mockOptions.latency;
-	/** @type {number} Total time in milliseconds this request should wait */
-	const latency = mockOptions.latency;
-	/** @type {number} Tracks how much time of duration has elapsed when a request is paused/resumed */
+	const expiresAt = paused ? null : Date.now() + latency;
 	const elapsedTime = 0;
 
-	return { id, name, expiresAt, latency, elapsedTime };
+	return { id, source, name, expiresAt, latency, elapsedTime };
 }
 
 /**
@@ -88,14 +83,19 @@ export class RequestController extends EventTarget {
 	 */
 	#timer = null;
 
-	/** @param {string} rcId The ID for the RequestControllerClientConnection durable object */
-	constructor(rcId) {
+	/**
+	 * @param {string} rcId The ID for the RequestControllerClientConnection durable object
+	 * @param {string} [source] The source of the request controller
+	 */
+	constructor(rcId, source = "unknown") {
 		super();
 
 		if (!log) {
 			log = debug("RSS:RequestController");
 		}
 
+		/** @type {string} */
+		this.source = source;
 		/** @type {boolean} */
 		this.areNewRequestsPaused = false;
 		/** @type {number} */
@@ -116,6 +116,7 @@ export class RequestController extends EventTarget {
 		log("fetch %o %o", input, requestInit);
 
 		const request = createMockRequest(input, requestInit, {
+			source: this.source,
 			latency: this.latency,
 			paused: this.areNewRequestsPaused,
 		});

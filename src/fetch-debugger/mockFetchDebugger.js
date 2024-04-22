@@ -225,6 +225,10 @@ export class MockFetchDebugger extends HTMLElement {
 
 			:host([hidden]) { display: none; }
 
+			:host * {
+				box-sizing: border-box;
+			}
+
 			button {
 				display: inline-block;
 				border: 0;
@@ -258,14 +262,17 @@ export class MockFetchDebugger extends HTMLElement {
 			ul:empty::after {
 				content: "(Empty)";
 				display: block;
-			}
-
-			#inflight .request {
-				display: grid;
+				min-height: 22px;
 				margin: 0.15rem 0;
 			}
 
-			#inflight .request-btn {
+			.inflight .request {
+				display: grid;
+				min-height: 22px;
+				margin: 0.15rem 0;
+			}
+
+			.inflight .request-btn {
 				display: flex;
 				grid-row: 1;
 				grid-column: 1;
@@ -274,15 +281,15 @@ export class MockFetchDebugger extends HTMLElement {
 				cursor: pointer;
 			}
 
-			#inflight .request-label {
+			.inflight .request-label {
 				margin-right: auto;
 			}
 
-			#inflight .status {
+			.inflight .status {
 				font-family: Segoe UI Symbol,-apple-system,system-ui,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,sans-serif;
 			}
 
-			#inflight progress {
+			.inflight progress {
 				display: block;
 				height: 100%;
 				width: 100%;
@@ -294,19 +301,19 @@ export class MockFetchDebugger extends HTMLElement {
 				grid-column: 1;
 			}
 
-			#inflight progress::-webkit-progress-bar {
+			.inflight progress::-webkit-progress-bar {
 				background-color: #eee;
   			/* border-radius: 2px; */
   			/* box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25) inset; */
 			}
 
-			#inflight progress::-webkit-progress-value {
+			.inflight progress::-webkit-progress-value {
 				background-color: lightblue;
     		border-radius: 2px;
     		background-size: 35px 20px, 100% 100%, 100% 100%;
 			}
 
-			#inflight progress::-moz-progress-bar {
+			.inflight progress::-moz-progress-bar {
 				background-color: lightblue;
     		border-radius: 2px;
     		background-size: 35px 20px, 100% 100%, 100% 100%;
@@ -315,6 +322,8 @@ export class MockFetchDebugger extends HTMLElement {
 			#completed li {
 				transition: opacity 3s ease-in ${fadeOutDuration}ms;
 				opacity: 1;
+				min-height: 22px;
+				margin: 0.15rem 0;
 			}
 		`;
 		this.shadowRoot?.appendChild(style);
@@ -349,8 +358,7 @@ export class MockFetchDebugger extends HTMLElement {
 				}),
 				"Pause new requests",
 			),
-			h("h2", null, "Inflight"),
-			h("ul", { id: "inflight" }),
+			h("div", { id: "inflight-container" }),
 			h("h2", null, "Recently done"),
 			h("ul", { id: "completed" }),
 		];
@@ -437,6 +445,20 @@ export class MockFetchDebugger extends HTMLElement {
 		return r;
 	}
 
+	/** @type {(source: string) => Element} */
+	#getOrCreateInflightSection(source) {
+		const inflightContainer = this.shadowRoot?.getElementById("inflight-container");
+		if (!inflightContainer) throw new Error("inflightContainer not found");
+
+		const list = inflightContainer.querySelector(`.inflight.source--${source}`);
+		if (list) return list;
+
+		inflightContainer.appendChild(h("h2", null, `Inflight (${source})`));
+		const newList = h("ul", { class: `inflight source--${source}` });
+		inflightContainer.appendChild(newList);
+		return newList;
+	}
+
 	#updateLatency() {
 		/** @type {HTMLInputElement} */
 		// @ts-expect-error
@@ -479,10 +501,10 @@ export class MockFetchDebugger extends HTMLElement {
 		let isRunning = false; // Track if any requests are running
 
 		// Update requests already in list
-		const inflightList = shadowRoot.getElementById("inflight");
-		if (!inflightList) throw new Error("inflightList not found");
+		const inflightLists = Array.from(shadowRoot.querySelectorAll(".inflight"));
+		const inflightItems = inflightLists.flatMap((list) => Array.from(list.children));
 
-		for (const listItem of Array.from(inflightList.children)) {
+		for (const listItem of inflightItems) {
 			const requestId = listItem.getAttribute("data-req-id");
 			if (!requestId) throw new Error("requestId not found");
 
@@ -537,6 +559,7 @@ export class MockFetchDebugger extends HTMLElement {
 					isRunning = true;
 				}
 
+				const inflightList = this.#getOrCreateInflightSection(request.source);
 				inflightList.appendChild(
 					h(
 						"li",

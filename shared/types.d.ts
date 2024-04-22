@@ -1,8 +1,15 @@
 interface MockRequest {
+	/** @type {string} */
 	id: string;
+	/** @type {string} */
+	source: string;
+	/** @type {string} Display name of the request */
 	name: string;
+	/** @type {number | null} When this request should resolve. If null, request is paused and not scheduled to complete */
 	expiresAt: number | null;
+	/** @type {number} Total time in milliseconds this request should wait */
 	latency: number;
+	/** @type {number} Tracks how much time of duration has elapsed when a request is paused/resumed */
 	elapsedTime: number;
 }
 
