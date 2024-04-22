@@ -1,4 +1,4 @@
-import { MockRequestEvent } from "../../server/RequestController.js";
+import { MockRequestEvent } from "../../shared/RequestController.js";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -331,7 +331,7 @@ export class MockFetchDebugger extends HTMLElement {
 					max: "10000",
 					step: "500",
 					value: this.#durationMs,
-					oninput: () => this.updateLatency(),
+					oninput: () => this.#updateLatency(),
 				}),
 			),
 			h(
@@ -340,9 +340,9 @@ export class MockFetchDebugger extends HTMLElement {
 				h("input", {
 					id: "pause-new",
 					type: "checkbox",
-					/** @type {(event: InputEvent) => void} */
+					/** @type {(event: any) => void} */
 					oninput: (event) => {
-						const target = /** @type {HTMLInputElement} */ (event.target);
+						const target = event.currentTarget;
 						this.areNewRequestsPaused = target.checked;
 					},
 					checked: this.#areNewRequestsPaused,
@@ -356,8 +356,8 @@ export class MockFetchDebugger extends HTMLElement {
 		];
 
 		body.forEach((child) => this.shadowRoot?.appendChild(child));
-		this.updateLatency();
-		this.update();
+		this.#updateLatency();
+		this.#scheduleUpdate();
 	}
 
 	get durationMs() {
@@ -365,7 +365,7 @@ export class MockFetchDebugger extends HTMLElement {
 	}
 	set durationMs(newDuration) {
 		this.#durationMs = newDuration;
-		this.update();
+		this.#scheduleUpdate();
 	}
 
 	get areNewRequestsPaused() {
@@ -373,15 +373,15 @@ export class MockFetchDebugger extends HTMLElement {
 	}
 	set areNewRequestsPaused(newPaused) {
 		this.#areNewRequestsPaused = newPaused;
-		this.update();
+		this.#scheduleUpdate();
 	}
 
 	connectedCallback() {
-		this.update();
+		this.#scheduleUpdate();
 	}
 
 	disconnectedCallback() {
-		this.update();
+		this.#scheduleUpdate();
 	}
 
 	/** @type {(request: MockRequest) => void} */
@@ -394,12 +394,50 @@ export class MockFetchDebugger extends HTMLElement {
 	}
 
 	/** @type {(request: MockRequest) => void} */
-	addNewRequest(request) {
+	addRequest(request) {
+		if (this.requests.has(request.id)) {
+			console.warn(`Request with id "${request.id}" already exists.`);
+			this.requests.delete(request.id);
+		}
+
 		this.requests.set(request.id, request);
-		this.update();
+		this.#scheduleUpdate();
 	}
 
-	updateLatency() {
+	/** @type {(request: MockRequest) => void} */
+	pauseRequest(r) {
+		const request = this.#getInternalRequest(r);
+
+		request.expiresAt = null;
+		this.#scheduleUpdate();
+	}
+
+	/** @type {(request: MockRequest) => void} */
+	resumeRequest(r) {
+		const request = this.#getInternalRequest(r);
+		request.expiresAt = r.expiresAt;
+		this.#scheduleUpdate();
+	}
+
+	/** @type {(request: MockRequest) => void} */
+	completeRequest(r) {
+		const request = this.#getInternalRequest(r);
+
+		request.expiresAt = 0;
+		this.#scheduleUpdate();
+	}
+
+	/** @type {(r: MockRequest) => MockRequest} */
+	#getInternalRequest(r) {
+		const request = this.requests.get(r.id);
+		if (request) return request;
+
+		console.warn(`No request with id "${r.id}" exists.`);
+		this.requests.set(r.id, r);
+		return r;
+	}
+
+	#updateLatency() {
 		/** @type {HTMLInputElement} */
 		// @ts-expect-error
 		const latency = this.shadowRoot?.getElementById("latency");
@@ -412,7 +450,18 @@ export class MockFetchDebugger extends HTMLElement {
 		latencyLabel.textContent = `${latencySec} second${pluralEnding}`;
 	}
 
-	update() {
+	/** @type {boolean} */
+	#isUpdateScheduled = false;
+	#scheduleUpdate() {
+		if (this.#isUpdateScheduled) return;
+		this.#isUpdateScheduled = true;
+		requestAnimationFrame(() => {
+			this.#isUpdateScheduled = false;
+			this.#update();
+		});
+	}
+
+	#update() {
 		if (!this.isConnected) {
 			return;
 		}
@@ -460,14 +509,16 @@ export class MockFetchDebugger extends HTMLElement {
 				}
 
 				if (!isPaused) {
-					isRunning = true;
-					const timeLeft = (request.expiresAt || 0) - now;
-					if (timeLeft < 16) {
-						// If this request will expire within 16 ms of now (or has already
-						// expired) then go ahead and mark it as finished
+					if (request.expiresAt === 0) {
 						finished.push(request);
 					} else {
-						progress.value = ((request.latency - timeLeft) / request.latency) * 100;
+						const timeLeft = (request.expiresAt || 0) - now;
+						if (timeLeft <= 0) {
+							progress.value = 100;
+						} else {
+							isRunning = true;
+							progress.value = ((request.latency - timeLeft) / request.latency) * 100;
+						}
 					}
 				}
 			} else {
@@ -517,7 +568,6 @@ export class MockFetchDebugger extends HTMLElement {
 
 		for (let request of finished) {
 			shadowRoot.querySelector(`[data-req-id="${request.id}"]`)?.remove();
-			request.resolve();
 			requests.delete(request.id);
 
 			/** @type {(event: { target: Element }) => void} */
@@ -541,7 +591,7 @@ export class MockFetchDebugger extends HTMLElement {
 		}
 
 		if (isRunning) {
-			requestAnimationFrame(() => this.update());
+			this.#scheduleUpdate();
 		}
 	}
 }

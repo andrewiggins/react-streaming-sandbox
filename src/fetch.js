@@ -1,5 +1,5 @@
 /**
- * @typedef {(input: RequestInfo, init?: RequestInit) => Promise<Response>} Fetch
+ * @typedef {(input: string | URL | Request, init?: RequestInit) => Promise<Response>} Fetch
  * @typedef {{ getStore(): Fetch | undefined }} FetchStore
  * @type {FetchStore | undefined} */
 let fetchStore;

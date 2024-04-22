@@ -3,6 +3,13 @@
 	"compilerOptions": {
 		"types": ["@types/node", "react/canary"]
 	},
-	"include": ["../src/types.d.ts", "../src/request-controller/types.d.ts", "../src/routes/movie-app/types.d.ts", "."],
+	"include": [
+		"../src/types.d.ts",
+		"../shared/types.d.ts",
+		"../src/request-controller/types.d.ts",
+		"../src/routes/movie-app/types.d.ts",
+		".",
+		"../shared/RequestController.js"
+	],
 	"exclude": ["../node_modules"]
 }

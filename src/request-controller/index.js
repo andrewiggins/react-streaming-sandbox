@@ -1,8 +1,9 @@
-import { MockRequestEvent } from "../../server/RequestController.js";
 import { createRequestControllerClient } from "./client.js";
 import { installFetchDebugger } from "./mockFetchDebugger.js";
 
 async function main() {
+	localStorage.debug = "RSS:*";
+
 	if (!window.RCID) return;
 	const rcClient = await createRequestControllerClient(window.RCID);
 
@@ -24,18 +25,23 @@ async function main() {
 	rcClient.addEventListener("message", (event) => {
 		console.log(event);
 
-		/** @type {MockRequestEvents[keyof MockRequestEvents] | InitEvent} */
+		/** @type {MockRequestEventMap[keyof MockRequestEventMap]} */
 		const data = JSON.parse(event.data);
-		if (data.type === "init") {
-			data.requests.forEach(([id, request]) => {
-				fetchDebugger.addNewRequest(request);
+		if (data.type === "sync") {
+			data.detail.requests.forEach(([id, request]) => {
+				fetchDebugger.addRequest(request);
 			});
 		} else if (data.type === "new-request") {
-			fetchDebugger.addNewRequest(data.request);
+			fetchDebugger.addRequest(data.detail.request);
+		} else if (data.type === "request-pause") {
+			fetchDebugger.pauseRequest(data.detail.request);
+		} else if (data.type === "request-resume") {
+			fetchDebugger.resumeRequest(data.detail.request);
 		} else if (data.type === "request-complete") {
-			fetchDebugger.completeRequest(data.request.id);
+			fetchDebugger.completeRequest(data.detail.request);
 		}
 	});
+
 	rcClient.send(`{"type":"ping"}`);
 
 	/** @type {any}*/ (globalThis).rcClient;

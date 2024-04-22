@@ -19,10 +19,10 @@ function createWebSocket(path) {
 			cleanup();
 			reject(new Error("WebSocket closed"));
 		};
-		/** @type {(e: Event) => void} */
+		/** @type {(e: any) => void} */
 		const onError = (e) => {
 			cleanup();
-			reject(/** @type {ErrorEvent} */ (e).error || new Error("WebSocket error"));
+			reject(e.error || new Error("WebSocket error"));
 		};
 
 		websocket.addEventListener("open", onOpen);

@@ -1,85 +1,55 @@
 import debug from "debug";
 
-const log = debug("RSS:RequestController");
+/** @type {debug.Debugger} */
+let log;
 
-const noop = () => {};
+let mockRequestId = 0;
 
-export class MockRequest {
-	static id = 0; // Public for testing
+/**
+ * @param {string | URL | Request} input Mock URL
+ * @param {RequestInit} [init] Mock request options
+ * @param {{ latency: number; paused: boolean; }} [mockOptions] Mock request options
+ * @returns {MockRequest}
+ */
+export function createMockRequest(input, init = { method: "GET" }, mockOptions = { latency: 3000, paused: false }) {
+	// const request = new Request(input, init);
+	// this.request = request;
+	const request = { method: init.method, url: input };
 
-	/** @type {() => void} */
-	#resolver = noop;
-	/** @type {() => void} */
-	#rejecter = noop;
+	/** @type {string} */
+	const id = `${++mockRequestId}`;
+	/** @type {string} Display name of the request */
+	const name = `${request.method} ${request.url}`;
+	/** @type {number | null} When this request should resolve. If null, request is paused and not scheduled to complete */
+	const expiresAt = mockOptions.paused ? null : Date.now() + mockOptions.latency;
+	/** @type {number} Total time in milliseconds this request should wait */
+	const latency = mockOptions.latency;
+	/** @type {number} Tracks how much time of duration has elapsed when a request is paused/resumed */
+	const elapsedTime = 0;
 
-	/**
-	 * @param {string | URL | Request} input Mock URL
-	 * @param {RequestInit} [init] Mock request options
-	 * @param {{ latency: number; paused: boolean; }} [mockOptions] Mock request options
-	 */
-	constructor(input, init = { method: "GET" }, mockOptions = { latency: 3000, paused: false }) {
-		// const request = new Request(input, init);
-		// this.request = request;
-		const request = { method: init.method, url: input };
-
-		/** @type {string} */
-		this.id = `${++MockRequest.id}`;
-		/** @type {string} Display name of the request */
-		this.name = `${request.method} ${request.url}`;
-		/** @type {number | null} When this request should resolve. If null, request is paused and not scheduled to complete */
-		this.expiresAt = mockOptions.paused ? null : Date.now() + mockOptions.latency;
-		/** @type {number} Total time in milliseconds this request should wait */
-		this.latency = mockOptions.latency;
-		/** @type {number} Tracks how much time of duration has elapsed when a request is paused/resumed */
-		this.elapsedTime = 0;
-
-		/** @type {Promise<void>} */
-		this.promise = new Promise((resolve, reject) => {
-			this.#resolver = () => {
-				resolve();
-			};
-
-			this.#rejecter = () => {
-				reject();
-			};
-		});
-	}
-
-	resolve() {
-		this.#resolver();
-	}
-
-	reject() {
-		this.#rejecter();
-	}
-
-	toJSON() {
-		return {
-			id: this.id,
-			name: this.name,
-			expiresAt: this.expiresAt,
-			latency: this.latency,
-			elapsedTime: this.elapsedTime,
-			// request: {
-			// 	method: this.request.method.toString(),
-			// 	url: this.request.url.toString(),
-			// 	headers: Object.fromEntries(this.request.headers.entries()),
-			// 	redirect: this.request.redirect,
-			// 	integrity: this.request.integrity,
-			// },
-		};
-	}
+	return { id, name, expiresAt, latency, elapsedTime };
 }
 
 /**
- * @typedef {"new-request" | "request-pause" | "request-resume" | "request-complete"} MockRequestEventType
- *
- * @typedef MockRequestEvents
- * @property {MockRequestEvent<"new-request">} new-request
- * @property {MockRequestEvent<"request-pause">} request-pause
- * @property {MockRequestEvent<"request-resume">} request-resume
- * @property {MockRequestEvent<"request-complete">} request-complete
+ * @typedef {Promise<any> & {resolve(): void; reject(): void;}} MockRequestPromise
+ * @type {() => MockRequestPromise}
  */
+function createMockRequestPromise() {
+	let resolve, reject;
+	/** @type {Promise<void>} */
+	const promise = new Promise((resolver, rejecter) => {
+		resolve = () => {
+			resolver();
+		};
+
+		reject = () => {
+			rejecter();
+		};
+	});
+
+	Object.assign(promise, { resolve, reject });
+	return /** @type {any} */ (promise);
+}
 
 /**
  * @extends {Event<Type>}
@@ -99,18 +69,18 @@ export class MockRequestEvent extends Event {
 			this.type = type;
 		} catch (e) {}
 
-		this.request = request;
+		this.detail = { request };
 	}
 
 	toJSON() {
 		return {
 			type: this.type,
-			request: this.request.toJSON(),
+			detail: this.detail,
 		};
 	}
 }
 
-/** @extends {EventTarget<MockRequestEvents>} */
+/** @extends {EventTarget<MockRequestEventMap>} */
 export class RequestController extends EventTarget {
 	/**
 	 * @typedef {{ expiresAt: number; timeoutId: ReturnType<typeof setTimeout>; }} MockFetchTimer
@@ -121,13 +91,22 @@ export class RequestController extends EventTarget {
 	/** @param {string} rcId The ID for the RequestControllerClientConnection durable object */
 	constructor(rcId) {
 		super();
+
+		if (!log) {
+			log = debug("RSS:RequestController");
+		}
+
 		/** @type {boolean} */
 		this.areNewRequestsPaused = false;
 		/** @type {number} */
 		this.latency = 3 * 1000;
+		this.rcId = rcId;
+
 		/** @type {Map<string, MockRequest>} */
 		this.requests = new Map();
-		this.rcId = rcId;
+
+		/** @type {WeakMap<MockRequest, MockRequestPromise>} */
+		this.mockRequestsPromises = new WeakMap();
 	}
 
 	// Actual fetch signature:
@@ -136,7 +115,7 @@ export class RequestController extends EventTarget {
 	fetch = async (input, requestInit) => {
 		log("fetch %o %o", input, requestInit);
 
-		const request = new MockRequest(input, requestInit, {
+		const request = createMockRequest(input, requestInit, {
 			latency: this.latency,
 			paused: this.areNewRequestsPaused,
 		});
@@ -150,7 +129,10 @@ export class RequestController extends EventTarget {
 			this.#scheduleUpdate();
 		}
 
-		return request.promise.then(() => new Response());
+		const requestPromise = createMockRequestPromise();
+		this.mockRequestsPromises.set(request, requestPromise);
+
+		return requestPromise.then(() => new Response());
 	};
 
 	/**
@@ -224,7 +206,12 @@ export class RequestController extends EventTarget {
 			} else if (request.expiresAt - now < 16) {
 				// If this request will expire within 16 ms of now (or has already expired)
 				// then go ahead and resolve it
-				request.resolve();
+				const requestPromise = this.mockRequestsPromises.get(request);
+				if (!requestPromise) {
+					throw new Error(`Request promise for request "${request.id}" not found`);
+				}
+
+				requestPromise.resolve();
 				this.dispatchEvent(new MockRequestEvent("request-complete", request));
 
 				toRemove.push(request);
@@ -233,6 +220,7 @@ export class RequestController extends EventTarget {
 
 		for (let request of toRemove) {
 			this.requests.delete(request.id);
+			this.mockRequestsPromises.delete(request);
 		}
 
 		this.#scheduleUpdate();

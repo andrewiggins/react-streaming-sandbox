@@ -3,6 +3,6 @@
 	"compilerOptions": {
 		"types": ["@types/web", "react/canary", "react-dom/canary"]
 	},
-	"include": ["."],
+	"include": [".", "../shared/types.d.ts"],
 	"exclude": ["../node_modules"]
 }

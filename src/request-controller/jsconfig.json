@@ -5,5 +5,5 @@
 		"jsxFactory": "h",
 		"types": ["@types/web"]
 	},
-	"include": ["."]
+	"include": [".", "../../shared/types.d.ts"]
 }
