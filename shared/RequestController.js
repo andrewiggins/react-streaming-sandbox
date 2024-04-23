@@ -15,8 +15,9 @@ function createMockRequest(input, init = { method: "GET" }, mockOptions = { sour
 	const request = { method: init.method, url: input };
 	const { source, latency, paused } = mockOptions;
 
-	const id = `${source}:${++mockRequestId}`;
-	const name = `${request.method} ${request.url}`;
+	const idNum = ++mockRequestId;
+	const id = `${source}:${idNum}`;
+	const name = `${request.method} ${request.url} (${id})`;
 	const expiresAt = paused ? null : Date.now() + latency;
 	const elapsedTime = 0;
 
@@ -56,6 +57,10 @@ class MockRequestEvent extends CustomEvent {
 	 */
 	constructor(type, request) {
 		super(type, { detail: { request } });
+	}
+
+	toJSON() {
+		return { type: this.type, detail: this.detail };
 	}
 }
 

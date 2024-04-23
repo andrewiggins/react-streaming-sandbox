@@ -225,7 +225,8 @@ export class MockFetchDebugger extends HTMLElement {
 		style.innerHTML = `
 			:host {
 				display: block;
-				padding: 0.125rem 0.5rem 1.1rem 0.5rem
+				padding: 0.125rem 0.5rem 1.1rem 0.5rem;
+				min-width: 200px;
 			}
 
 			:host([hidden]) { display: none; }
@@ -404,6 +405,41 @@ export class MockFetchDebugger extends HTMLElement {
 		} else {
 			this.dispatchEvent(new CustomEvent("request-pause", { detail: { requestId: request.id } }));
 		}
+	}
+
+	/** @type {(requestController: RequestControllerFacade) => void} */
+	attachRequestController(requestController) {
+		this.addEventListener("request-pause", (event) => {
+			requestController.pause(event.detail.requestId);
+		});
+
+		this.addEventListener("request-resume", (event) => {
+			requestController.resume(event.detail.requestId);
+		});
+
+		requestController.addEventListener("new-request", (event) => {
+			this.addRequest(event.detail.request);
+		});
+
+		requestController.addEventListener("pause-request", (event) => {
+			this.pauseRequest(event.detail.request);
+		});
+
+		requestController.addEventListener("resume-request", (event) => {
+			this.resumeRequest(event.detail.request);
+		});
+
+		requestController.addEventListener("complete-request", (event) => {
+			this.completeRequest(event.detail.request);
+		});
+
+		requestController.addEventListener("sync-state", (event) => {
+			this.areNewRequestsPaused = event.detail.areNewRequestsPaused;
+			this.latencyMs = event.detail.latency;
+			event.detail.requests.forEach(([id, request]) => {
+				this.addRequest(request);
+			});
+		});
 	}
 
 	/** @type {(request: MockRequest) => void} */

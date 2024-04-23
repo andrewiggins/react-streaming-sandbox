@@ -1,5 +1,6 @@
 interface Window {
 	RCID?: string;
+	fetchDebugger: import("./mockFetchDebugger.js").MockFetchDebugger;
 }
 
 type FetchDebuggerEventType = keyof FetchDebuggerEventMap;

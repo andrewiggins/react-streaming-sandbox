@@ -5,7 +5,15 @@ import { WebSocketServer } from "ws";
 import { getRequest, setResponse } from "./request-transform.js";
 import worker, { requestControllers } from "./_worker.js";
 import debug from "debug";
-import { RCIDName } from "../shared/constants.js";
+
+// Make CustomEvents serializable.
+const proto = /** @type {any} */ (CustomEvent.prototype);
+proto.toJSON = function () {
+	return {
+		type: this.type,
+		detail: this.detail,
+	};
+};
 
 const __dirname = new URL(".", import.meta.url).pathname;
 /** @type {(...args: string[]) => string} */
@@ -66,11 +74,14 @@ const webSocketLog = debug("RSS:webSocket");
 
 /** @type {(ws: import('ws').WebSocket, url: URL) => void} */
 function setupWebSocket(ws, url) {
-	const rcId = url.searchParams.get(RCIDName);
+	const rcId = url.searchParams.get("rcId");
 	if (!rcId) throw new Error("Missing rcId param");
 
 	const rc = requestControllers.get(rcId);
-	if (!rc) throw new Error("No request controller found");
+	if (!rc) {
+		console.warn("No request controller found for %s", rcId);
+		return;
+	}
 
 	webSocketLog("Accepted WebSocket connection %s", rcId);
 

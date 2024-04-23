@@ -1,3 +1,5 @@
+import { RequestController } from "../shared/RequestController.js";
+
 /**
  * @typedef {(input: string | URL | Request, init?: RequestInit) => Promise<Response>} Fetch
  * @typedef {{ getStore(): Fetch | undefined }} FetchStore
@@ -9,10 +11,21 @@ export function setMockFetchStore(store) {
 	fetchStore = store;
 }
 
+/** @type {RequestController | null} */
+let requestController = null;
+
 /** @type {Fetch} */
 function defaultMockFetch(input) {
-	console.log("Client mock fetching", input);
-	return Promise.resolve(new Response());
+	if (typeof window === "undefined") {
+		return Promise.resolve(new Response());
+	}
+
+	if (!requestController) {
+		requestController = new RequestController(crypto.randomUUID(), "client");
+		window.fetchDebugger.attachRequestController(requestController);
+	}
+
+	return requestController.fetch(input);
 }
 
 /** @type {() => Fetch} */
