@@ -16,13 +16,11 @@ interface MockRequest {
 type RequestControllerEventType = keyof RequestControllerEventMap;
 type RequestControllerEvent<EventType> = CustomEvent<{ request: MockRequest }, EventType>;
 
-type SyncEvent = CustomEvent<
+type SyncRequests = CustomEvent<
 	{
 		requests: Array<[string, MockRequest]>;
-		areNewRequestsPaused: boolean;
-		latency: number;
 	},
-	"sync-state"
+	"sync-requests"
 >;
 
 type PauseNewRequestsEvent = CustomEvent<
@@ -37,7 +35,7 @@ interface RequestControllerEventMap {
 	"pause-request": RequestControllerEvent<"pause-request">;
 	"resume-request": RequestControllerEvent<"resume-request">;
 	"complete-request": RequestControllerEvent<"complete-request">;
-	"sync-state": SyncEvent;
+	"sync-requests": SyncRequests;
 	"pause-new-requests": PauseNewRequestsEvent;
 }
 

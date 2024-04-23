@@ -163,8 +163,8 @@ function setupWebSocket(ws, url) {
 		ws.send(JSON.stringify(event));
 	});
 
-	/** @type {SyncEvent} */
-	const syncEvent = new CustomEvent("sync-state", {
+	/** @type {SyncRequests} */
+	const syncEvent = new CustomEvent("sync-requests", {
 		detail: { requests: Array.from(rc.requests.entries()), latency: rc.latency, areNewRequestsPaused: rc.areNewRequestsPaused },
 	});
 	ws.send(JSON.stringify(syncEvent));

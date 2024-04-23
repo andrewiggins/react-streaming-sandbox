@@ -433,12 +433,17 @@ export class MockFetchDebugger extends HTMLElement {
 			this.completeRequest(event.detail.request);
 		});
 
-		requestController.addEventListener("sync-state", (event) => {
-			this.areNewRequestsPaused = event.detail.areNewRequestsPaused;
-			this.latencyMs = event.detail.latency;
+		requestController.addEventListener("sync-requests", (event) => {
 			event.detail.requests.forEach(([id, request]) => {
-				this.addRequest(request);
+				const existingRequest = this.requests.get(id);
+				if (!existingRequest) {
+					this.addRequest(request);
+				} else {
+					this.requests.set(existingRequest.id, { ...existingRequest, ...request });
+				}
 			});
+
+			this.#scheduleUpdate();
 		});
 	}
 
