@@ -13,31 +13,36 @@ interface MockRequest {
 	elapsedTime: number;
 }
 
-type MockRequestEvent<T> = import("./RequestController.js").MockRequestEvent<T>;
-type MockRequestEventType = "sync" | "new-request" | "request-pause" | "request-resume" | "request-complete";
+interface RequestControllerFacade extends EventTarget<MockRequestEventMap> {
+	pause(id: MockRequest["id"]): void;
+	resume(id: MockRequest["id"]): void;
+}
 
-interface SyncEvent extends CustomEvent {
-	type: "sync";
-	detail: {
+type MockRequestEventType = keyof MockRequestEventMap;
+type MockRequestEvent<EventType> = CustomEvent<{ request: MockRequest }, EventType>;
+
+type SyncEvent = CustomEvent<
+	{
 		requests: Array<[string, MockRequest]>;
 		areNewRequestsPaused: boolean;
 		latency: number;
-	};
-}
+	},
+	"sync-state"
+>;
 
-interface PauseNewRequestsEvent extends CustomEvent {
-	type: "pause-new-requests";
-	detail: {
+type PauseNewRequestsEvent = CustomEvent<
+	{
 		value: boolean;
-	};
-}
+	},
+	"pause-new-requests"
+>;
 
 interface MockRequestEventMap {
 	"new-request": MockRequestEvent<"new-request">;
-	"request-pause": MockRequestEvent<"request-pause">;
-	"request-resume": MockRequestEvent<"request-resume">;
-	"request-complete": MockRequestEvent<"request-complete">;
-	sync: SyncEvent;
+	"pause-request": MockRequestEvent<"pause-request">;
+	"resume-request": MockRequestEvent<"resume-request">;
+	"complete-request": MockRequestEvent<"complete-request">;
+	"sync-state": SyncEvent;
 	"pause-new-requests": PauseNewRequestsEvent;
 }
 
@@ -144,6 +149,16 @@ class Event<EventType = string> {
 	static readonly CAPTURING_PHASE: number;
 	static readonly AT_TARGET: number;
 	static readonly BUBBLING_PHASE: number;
+}
+
+class CustomEvent<Detail = any, EventType = string> extends Event<EventType> {
+	constructor(type: EventType, eventInitDict?: CustomEventInit<Detail>);
+	/**
+	 * Returns any custom data event was created with. Typically used for synthetic events.
+	 *
+	 * [MDN Reference](https://developer.mozilla.org/docs/Web/API/CustomEvent/detail)
+	 */
+	readonly detail: Detail;
 }
 
 type EventListener<EventType extends Event = Event> = (event: EventType) => void;

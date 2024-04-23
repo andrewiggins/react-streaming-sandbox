@@ -1,5 +1,3 @@
-import { MockRequestEvent } from "../../shared/RequestController.js";
-
 const hasOwn = Object.prototype.hasOwnProperty;
 
 /**
@@ -203,9 +201,16 @@ function afterNextFrame(cb) {
 
 export class MockFetchDebugger extends HTMLElement {
 	/** @type {number} */
-	#durationMs;
+	#latencyMs;
 	/** @type {boolean} */
 	#areNewRequestsPaused;
+
+	/** @type {FetchDebuggerEventTarget["addEventListener"]} */
+	addEventListener = this.addEventListener;
+	/** @type {FetchDebuggerEventTarget["removeEventListener"]} */
+	removeEventListener = this.removeEventListener;
+	/** @type {FetchDebuggerEventTarget["dispatchEvent"]} */
+	dispatchEvent = this.dispatchEvent;
 
 	constructor() {
 		super();
@@ -213,7 +218,7 @@ export class MockFetchDebugger extends HTMLElement {
 
 		/** @type {Map<string, MockRequest>} */
 		this.requests = new Map();
-		this.#durationMs = 3 * 1000;
+		this.#latencyMs = 3 * 1000;
 		this.#areNewRequestsPaused = false;
 
 		const style = document.createElement("style");
@@ -339,7 +344,7 @@ export class MockFetchDebugger extends HTMLElement {
 					min: "0",
 					max: "10000",
 					step: "500",
-					value: this.#durationMs,
+					value: this.#latencyMs,
 					oninput: () => this.#updateLatency(),
 				}),
 			),
@@ -368,11 +373,11 @@ export class MockFetchDebugger extends HTMLElement {
 		this.#scheduleUpdate();
 	}
 
-	get durationMs() {
-		return this.#durationMs;
+	get latencyMs() {
+		return this.#latencyMs;
 	}
-	set durationMs(newDuration) {
-		this.#durationMs = newDuration;
+	set latencyMs(newLatency) {
+		this.#latencyMs = newLatency;
 		this.#scheduleUpdate();
 	}
 
@@ -395,9 +400,9 @@ export class MockFetchDebugger extends HTMLElement {
 	/** @type {(request: MockRequest) => void} */
 	onToggleRequest(request) {
 		if (request.expiresAt == null) {
-			this.dispatchEvent(new MockRequestEvent("request-resume", request));
+			this.dispatchEvent(new CustomEvent("request-resume", { detail: { requestId: request.id } }));
 		} else {
-			this.dispatchEvent(new MockRequestEvent("request-pause", request));
+			this.dispatchEvent(new CustomEvent("request-pause", { detail: { requestId: request.id } }));
 		}
 	}
 
@@ -463,7 +468,7 @@ export class MockFetchDebugger extends HTMLElement {
 		/** @type {HTMLInputElement} */
 		// @ts-expect-error
 		const latency = this.shadowRoot?.getElementById("latency");
-		this.#durationMs = latency.valueAsNumber;
+		this.#latencyMs = latency.valueAsNumber;
 		const latencySec = (latency.valueAsNumber / 1000).toFixed(1);
 		const latencyLabel = this.shadowRoot?.getElementById("latency-label");
 		const pluralEnding = latencySec == "1.0" ? "" : "s";

@@ -11,9 +11,7 @@ let mockRequestId = 0;
  * @param {{ source: string; latency: number; paused: boolean; }} [mockOptions] Mock request options
  * @returns {MockRequest}
  */
-export function createMockRequest(input, init = { method: "GET" }, mockOptions = { source: "unknown", latency: 3000, paused: false }) {
-	// const request = new Request(input, init);
-	// this.request = request;
+function createMockRequest(input, init = { method: "GET" }, mockOptions = { source: "unknown", latency: 3000, paused: false }) {
 	const request = { method: init.method, url: input };
 	const { source, latency, paused } = mockOptions;
 
@@ -47,31 +45,17 @@ function createMockRequestPromise() {
 }
 
 /**
- * @extends {Event<Type>}
+ * @extends {CustomEvent<{ request: MockRequest }, Type>}
  * @template {MockRequestEventType} Type
  */
 // Exported primarily for typing
-export class MockRequestEvent extends Event {
+class MockRequestEvent extends CustomEvent {
 	/**
 	 * @param {Type} type
 	 * @param {MockRequest} request
 	 */
 	constructor(type, request) {
-		super(type);
-
-		// Bleh, TypeScript hack
-		try {
-			this.type = type;
-		} catch (e) {}
-
-		this.detail = { request };
-	}
-
-	toJSON() {
-		return {
-			type: this.type,
-			detail: this.detail,
-		};
+		super(type, { detail: { request } });
 	}
 }
 
@@ -122,10 +106,10 @@ export class RequestController extends EventTarget {
 		});
 
 		this.requests.set(request.id, request);
-		await this.dispatchEvent(new MockRequestEvent("new-request", request));
+		this.dispatchEvent(new MockRequestEvent("new-request", request));
 
 		if (this.areNewRequestsPaused) {
-			this.dispatchEvent(new MockRequestEvent("request-pause", request));
+			this.dispatchEvent(new MockRequestEvent("pause-request", request));
 		} else {
 			this.#scheduleUpdate();
 		}
@@ -146,7 +130,8 @@ export class RequestController extends EventTarget {
 
 		const request = this.requests.get(id);
 		if (!request) {
-			throw new Error(`No request with id "${id}" exists.`);
+			log(`pause: no request with id "${id}" exists.`);
+			return;
 		}
 
 		const now = Date.now();
@@ -158,7 +143,7 @@ export class RequestController extends EventTarget {
 		request.elapsedTime = request.latency - (request.expiresAt - now);
 		request.expiresAt = null;
 
-		this.dispatchEvent(new MockRequestEvent("request-pause", request));
+		this.dispatchEvent(new MockRequestEvent("pause-request", request));
 		this.#resolveRequests(now);
 	}
 
@@ -172,7 +157,8 @@ export class RequestController extends EventTarget {
 
 		const request = this.requests.get(id);
 		if (!request) {
-			throw new Error(`No request with id "${id}" exists.`);
+			log(`resume: no request with id "${id}" exists.`);
+			return;
 		}
 
 		if (request.expiresAt != null) {
@@ -183,7 +169,7 @@ export class RequestController extends EventTarget {
 		const remainingTime = request.latency - request.elapsedTime;
 		request.expiresAt = now + remainingTime;
 
-		this.dispatchEvent(new MockRequestEvent("request-resume", request));
+		this.dispatchEvent(new MockRequestEvent("resume-request", request));
 		this.#resolveRequests(now);
 	}
 
@@ -213,7 +199,7 @@ export class RequestController extends EventTarget {
 				}
 
 				requestPromise.resolve();
-				this.dispatchEvent(new MockRequestEvent("request-complete", request));
+				this.dispatchEvent(new MockRequestEvent("complete-request", request));
 
 				toRemove.push(request);
 			}

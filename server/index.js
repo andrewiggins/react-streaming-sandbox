@@ -6,7 +6,6 @@ import { getRequest, setResponse } from "./request-transform.js";
 import worker, { requestControllers } from "./_worker.js";
 import debug from "debug";
 import { RCIDName } from "../shared/constants.js";
-import { MockRequestEvent } from "../shared/RequestController.js";
 
 const __dirname = new URL(".", import.meta.url).pathname;
 /** @type {(...args: string[]) => string} */
@@ -96,23 +95,30 @@ function setupWebSocket(ws, url) {
 		webSocketLog("Sending new request %s", event.detail.request.id);
 		ws.send(JSON.stringify(event));
 	});
-	rc.addEventListener("request-complete", async (event) => {
+	rc.addEventListener("pause-request", async (event) => {
+		webSocketLog("Sending request pause %s", event.detail.request.id);
+		ws.send(JSON.stringify(event));
+	});
+	rc.addEventListener("resume-request", async (event) => {
+		webSocketLog("Sending request resume %s", event.detail.request.id);
+		ws.send(JSON.stringify(event));
+	});
+	rc.addEventListener("complete-request", async (event) => {
 		webSocketLog("Sending request complete %s", event.detail.request.id);
 		ws.send(JSON.stringify(event));
 	});
 
 	/** @type {SyncEvent} */
-	const initEvent = {
-		type: "sync",
+	const syncEvent = new CustomEvent("sync-state", {
 		detail: { requests: Array.from(rc.requests.entries()), latency: rc.latency, areNewRequestsPaused: rc.areNewRequestsPaused },
-	};
-	ws.send(JSON.stringify(initEvent));
+	});
+	ws.send(JSON.stringify(syncEvent));
 }
 
 /** @type {(rcId: string, ws: import('ws').WebSocket, message: Buffer[] | ArrayBuffer | string) => Promise<void>} */
 async function handleWebSocketMessage(rcId, ws, message) {
 	try {
-		/** @type {MockRequestEventMap[keyof MockRequestEventMap] | { type: "ping" } | undefined} */
+		/** @type {FetchDebuggerEventMap[FetchDebuggerEventType] | { type: "ping" } | undefined} */
 		let event;
 		try {
 			event = JSON.parse(message.toString());
@@ -128,21 +134,17 @@ async function handleWebSocketMessage(rcId, ws, message) {
 			return;
 		}
 
-		webSocketLog(`Received message %s`, event);
+		webSocketLog(`Received message %s`, message);
 
 		// Handle the message.
 		if (event.type === "ping") {
 			webSocketLog("Sending pong...");
 			ws.send(JSON.stringify({ type: "pong" }));
 		} else if (event.type === "request-pause") {
-			requestController.pause(event.detail.request.id);
-			const response = reflectBackRequestEvent(event, requestController, event.detail.request.id);
-			ws.send(JSON.stringify(response));
+			requestController.pause(event.detail.requestId);
 		} else if (event.type === "request-resume") {
-			requestController.resume(event.detail.request.id);
-			const response = reflectBackRequestEvent(event, requestController, event.detail.request.id);
-			ws.send(JSON.stringify(response));
-		} else if (event.type === "pause-new-requests") {
+			requestController.resume(event.detail.requestId);
+		} else if (event.type === "request-new-request-paused") {
 			requestController.areNewRequestsPaused = event.detail.value;
 			ws.send(JSON.stringify({ type: "pause-new-requests", detail: { value: requestController.areNewRequestsPaused } }));
 		}
@@ -153,17 +155,4 @@ async function handleWebSocketMessage(rcId, ws, message) {
 		webSocketLog("Error: %s", error.stack);
 		ws.send(JSON.stringify({ error: error.stack }));
 	}
-}
-
-/**
- * @template {MockRequestEventType} T
- * @param {MockRequestEvent<T>} event
- * @param {import('../shared/RequestController.js').RequestController} requestController
- * @param {string} requestId
- * @returns {MockRequestEvent<T>}
- */
-function reflectBackRequestEvent(event, requestController, requestId) {
-	const updatedRequest = requestController.requests.get(requestId);
-	if (!updatedRequest) throw new Error("Request not found trying to reflect back event: " + event.type);
-	return new MockRequestEvent(event.type, updatedRequest);
 }
