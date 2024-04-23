@@ -4,4 +4,4 @@ interface Environment {
 	};
 }
 
-declare var window: undefined;
+declare var window: Window | undefined;
