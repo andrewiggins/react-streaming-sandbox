@@ -199,11 +199,19 @@ function afterNextFrame(cb) {
 	requestAnimationFrame(() => requestAnimationFrame(cb));
 }
 
+/** @type {(request: MockRequest) => string} */
+const getRequestName = (request) => `${request.method} ${request.url}`;
+
 export class MockFetchDebugger extends HTMLElement {
 	/** @type {number} */
-	#latencyMs;
+	#latencyMs = 3 * 1000;
 	/** @type {boolean} */
-	#areNewRequestsPaused;
+	#areNewRequestsPaused = false;
+
+	/** @type {Map<string, MockRequest>} */
+	requests = new Map();
+	/** @type {Map<string, RequestControllerFacade>} */
+	requestControllers = new Map();
 
 	/** @type {MockFetchDebuggerEventTarget["addEventListener"]} */
 	addEventListener = this.addEventListener;
@@ -215,11 +223,6 @@ export class MockFetchDebugger extends HTMLElement {
 	constructor() {
 		super();
 		this.attachShadow({ mode: "open" });
-
-		/** @type {Map<string, MockRequest>} */
-		this.requests = new Map();
-		this.#latencyMs = 3 * 1000;
-		this.#areNewRequestsPaused = false;
 
 		const style = document.createElement("style");
 		style.innerHTML = `
@@ -372,6 +375,26 @@ export class MockFetchDebugger extends HTMLElement {
 		body.forEach((child) => this.shadowRoot?.appendChild(child));
 		this.#updateLatency();
 		this.#scheduleUpdate();
+
+		this.addEventListener("request-pause", (event) => {
+			const request = this.requests.get(event.detail.requestId);
+			if (!request) throw new Error(`No request with id "${event.detail.requestId}" exists.`);
+
+			const requestController = this.requestControllers.get(request.rcId);
+			if (!requestController) throw new Error(`No request controller found for ${request.rcId}`);
+
+			requestController.pause(event.detail.requestId);
+		});
+
+		this.addEventListener("request-resume", (event) => {
+			const request = this.requests.get(event.detail.requestId);
+			if (!request) throw new Error(`No request with id "${event.detail.requestId}" exists.`);
+
+			const requestController = this.requestControllers.get(request.rcId);
+			if (!requestController) throw new Error(`No request controller found for ${request.rcId}`);
+
+			requestController.resume(event.detail.requestId);
+		});
 	}
 
 	get latencyMs() {
@@ -409,13 +432,7 @@ export class MockFetchDebugger extends HTMLElement {
 
 	/** @type {(requestController: RequestControllerFacade) => void} */
 	attachRequestController(requestController) {
-		this.addEventListener("request-pause", (event) => {
-			requestController.pause(event.detail.requestId);
-		});
-
-		this.addEventListener("request-resume", (event) => {
-			requestController.resume(event.detail.requestId);
-		});
+		this.requestControllers.set(requestController.rcId, requestController);
 
 		requestController.addEventListener("new-request", (event) => {
 			this.addRequest(event.detail.request);
@@ -491,16 +508,20 @@ export class MockFetchDebugger extends HTMLElement {
 		return r;
 	}
 
-	/** @type {(source: string) => Element} */
-	#getOrCreateInflightSection(source) {
+	/** @type {(rcId: string) => Element} */
+	#getOrCreateInflightSection(rcId) {
 		const inflightContainer = this.shadowRoot?.getElementById("inflight-container");
 		if (!inflightContainer) throw new Error("inflightContainer not found");
 
-		const list = inflightContainer.querySelector(`.inflight.source--${source}`);
+		const list = inflightContainer.querySelector(`.inflight.rcId--${rcId}`);
 		if (list) return list;
 
-		inflightContainer.appendChild(h("h2", null, `Inflight (${source})`));
-		const newList = h("ul", { class: `inflight source--${source}` });
+		const requestController = this.requestControllers.get(rcId);
+		if (!requestController) throw new Error(`No request controller found for ${rcId}`);
+		const rcName = requestController.name;
+
+		inflightContainer.appendChild(h("h2", null, `Inflight (${rcName})`));
+		const newList = h("ul", { class: `inflight rcId--${rcId}` });
 		inflightContainer.appendChild(newList);
 		return newList;
 	}
@@ -556,6 +577,7 @@ export class MockFetchDebugger extends HTMLElement {
 
 			const request = requests.get(requestId);
 			if (request) {
+				const requestName = getRequestName(request);
 				const isPaused = request.expiresAt == null;
 
 				const btn = /** @type {HTMLElement} */ (listItem.querySelector(".request-btn"));
@@ -567,11 +589,11 @@ export class MockFetchDebugger extends HTMLElement {
 
 					if (isPaused) {
 						btn.title = "Resume request";
-						btn.setAttribute("aria-label", `Resume request ${request.name}`);
+						btn.setAttribute("aria-label", `Resume request ${requestName}`);
 						status.textContent = "▶";
 					} else {
 						btn.title = "Pause request";
-						btn.setAttribute("aria-label", `Pause request ${request.name}`);
+						btn.setAttribute("aria-label", `Pause request ${requestName}`);
 						status.textContent = "⏸";
 					}
 				}
@@ -605,7 +627,8 @@ export class MockFetchDebugger extends HTMLElement {
 					isRunning = true;
 				}
 
-				const inflightList = this.#getOrCreateInflightSection(request.source);
+				const requestName = getRequestName(request);
+				const inflightList = this.#getOrCreateInflightSection(request.rcId);
 				inflightList.appendChild(
 					h(
 						"li",
@@ -617,11 +640,11 @@ export class MockFetchDebugger extends HTMLElement {
 								class: "request-btn",
 								"data-paused": isPaused.toString(),
 								title: isPaused ? "Resume request" : "Pause request",
-								"aria-label": isPaused ? `Resume request ${request.name}` : `Pause request ${request.name}`,
+								"aria-label": isPaused ? `Resume request ${requestName}` : `Pause request ${requestName}`,
 								type: "button",
 								onclick: () => this.onToggleRequest(request),
 							},
-							h("span", { class: "request-label" }, request.name),
+							h("span", { class: "request-label" }, requestName),
 							h("span", { class: "status" }, isPaused ? "▶" : "⏸"),
 						),
 					),
@@ -641,7 +664,7 @@ export class MockFetchDebugger extends HTMLElement {
 
 			/** @type {(event: { target: Element }) => void} */
 			const ontransitionend = (event) => event.target.remove();
-			const newItem = h("li", { ontransitionend }, request.name);
+			const newItem = h("li", { ontransitionend }, getRequestName(request));
 
 			finishedItems.push(newItem);
 			completedList.appendChild(newItem);

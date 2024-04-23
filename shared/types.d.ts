@@ -1,10 +1,12 @@
 interface MockRequest {
 	/** @type {string} */
 	id: string;
+	/** @type {string} The RequestController that owns this request */
+	rcId: string;
 	/** @type {string} */
-	source: string;
-	/** @type {string} Display name of the request */
-	name: string;
+	method: string;
+	/** @type {string} */
+	url: string;
 	/** @type {number | null} When this request should resolve. If null, request is paused and not scheduled to complete */
 	expiresAt: number | null;
 	/** @type {number} Total time in milliseconds this request should wait */
@@ -40,6 +42,8 @@ interface RequestControllerEventMap {
 }
 
 interface RequestControllerFacade extends EventTarget<RequestControllerEventMap> {
+	get rcId(): string;
+	get name(): string;
 	pause(id: MockRequest["id"]): void;
 	resume(id: MockRequest["id"]): void;
 }

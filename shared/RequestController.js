@@ -1,27 +1,41 @@
 import debug from "debug";
 
 /** @type {debug.Debugger} */
-let log;
+let log = debug("RSS:RequestController");
 
 let mockRequestId = 0;
 
 /**
  * @param {string | URL | Request} input Mock URL
- * @param {RequestInit} [init] Mock request options
- * @param {{ source: string; latency: number; paused: boolean; }} [mockOptions] Mock request options
+ * @param {RequestInit | undefined} init Mock request options
+ * @param {{ rcId: string; latency?: number; paused?: boolean; }} mockOptions Mock request options
  * @returns {MockRequest}
  */
-function createMockRequest(input, init = { method: "GET" }, mockOptions = { source: "unknown", latency: 3000, paused: false }) {
-	const request = { method: init.method, url: input };
-	const { source, latency, paused } = mockOptions;
+function createMockRequest(input, init, mockOptions) {
+	const { rcId, latency = 3000, paused = false } = mockOptions;
 
 	const idNum = ++mockRequestId;
-	const id = `${source}:${idNum}`;
-	const name = `${request.method} ${request.url} (${id})`;
+	const id = `${rcId}:${idNum}`;
 	const expiresAt = paused ? null : Date.now() + latency;
 	const elapsedTime = 0;
 
-	return { id, source, name, expiresAt, latency, elapsedTime };
+	/** @type {string} */
+	let url;
+	/** @type {string} */
+	let method;
+
+	if (typeof input === "string") {
+		url = input;
+		method = init?.method ?? "GET";
+	} else if (input instanceof URL) {
+		url = input.href;
+		method = init?.method ?? "GET";
+	} else {
+		url = input.url;
+		method = input.method;
+	}
+
+	return { id, rcId, url, method, expiresAt, latency, elapsedTime };
 }
 
 /**
@@ -74,17 +88,13 @@ export class RequestController extends EventTarget {
 
 	/**
 	 * @param {string} rcId The ID for the RequestControllerClientConnection durable object
-	 * @param {string} [source] The source of the request controller
+	 * @param {string} name The name of the request controller
 	 */
-	constructor(rcId, source = "unknown") {
+	constructor(rcId, name) {
 		super();
 
-		if (!log) {
-			log = debug("RSS:RequestController");
-		}
-
 		/** @type {string} */
-		this.source = source;
+		this.name = name;
 		/** @type {boolean} */
 		this.areNewRequestsPaused = false;
 		/** @type {number} */
@@ -105,7 +115,7 @@ export class RequestController extends EventTarget {
 		log("fetch %o %o", input, requestInit);
 
 		const request = createMockRequest(input, requestInit, {
-			source: this.source,
+			rcId: this.rcId,
 			latency: this.latency,
 			paused: this.areNewRequestsPaused,
 		});

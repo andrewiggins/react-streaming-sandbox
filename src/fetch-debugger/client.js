@@ -42,13 +42,16 @@ function createWebSocket(path) {
 class RemoteRequestController extends EventTarget {
 	/**
 	 * @param {string} rcId
+	 * @param {string} name
 	 * @param {WebSocket} webSocket
 	 */
-	constructor(rcId, webSocket) {
+	constructor(rcId, name, webSocket) {
 		super();
 
 		/** @type {string} */
 		this.rcId = rcId;
+		/** @type {string} */
+		this.name = name;
 		/** @type {WebSocket} */
 		this.webSocket = webSocket;
 
@@ -82,5 +85,5 @@ class RemoteRequestController extends EventTarget {
 /** @type {(rcId: string) => Promise<RequestControllerFacade>} */
 export async function createRemoteRequestController(rcId) {
 	const webSocket = await createWebSocket(`/request-controller?rcId=${rcId}`);
-	return new RemoteRequestController(rcId, webSocket);
+	return new RemoteRequestController(rcId, "client", webSocket);
 }
