@@ -1,19 +1,78 @@
-import { Component, Suspense } from "react";
+import { Component, Suspense, lazy, useState, useEffect, useCallback, startTransition } from "react";
 import Html from "../../../Html.jsx";
 import Spinner from "./Spinner.jsx";
 import "./styles.css";
 import MovieListPage from "./MovieListPage.jsx";
 
+const MoviePageLoader = lazy(() => import("./MoviePage.jsx"));
+
 /** @param {RootProps} props */
-export default function App(props) {
+export default function Root(props) {
 	return (
 		<Html {...props} title="Movie App">
 			<Suspense fallback={<Spinner size="large" />}>
 				<ErrorBoundary FallbackComponent={ErrorPage}>
-					<MovieListPage loadingId={null} onMovieClick={(id) => console.log("clicked movie", id)} />
+					<App />
 				</ErrorBoundary>
 			</Suspense>
 		</Html>
+	);
+}
+
+/**
+ * @typedef {{ showDetail: false; currentId: null;  }} ListAppState
+ * @typedef {{ showDetail: false; currentId: number;  }} LoadingDetailAppState
+ * @typedef {{ showDetail: true; currentId: number;  }} DetailAppState
+ * @typedef {ListAppState | LoadingDetailAppState | DetailAppState} AppState
+ */
+function App() {
+	const [state, setState] = useState(/** @type {AppState} */ ({ showDetail: false, currentId: null }));
+
+	useEffect(() => {
+		window?.scrollTo(0, 0);
+	}, [state.showDetail, state.currentId]);
+
+	/** @type {(id: number) => void} */
+	const handleMovieClick = useCallback((id) => {
+		// TODO: Enable MoviePage when it works
+		// setState({
+		// 	showDetail: false,
+		// 	currentId: id,
+		// });
+		// startTransition(() => {
+		// 	setState({
+		// 		showDetail: true,
+		// 		currentId: id,
+		// 	});
+		// });
+	}, []);
+
+	/** @type {() => void} */
+	const handleBackClick = useCallback(() => {
+		setState({
+			currentId: null,
+			showDetail: false,
+		});
+	}, []);
+
+	const { currentId, showDetail } = state;
+	return (
+		<div className="App">
+			{showDetail ? (
+				<>
+					<button className="App-back" onClick={handleBackClick}>
+						{"👈"}
+					</button>
+					<Suspense fallback={<Spinner size="large" />}>
+						<MoviePageLoader id={currentId} />
+					</Suspense>
+				</>
+			) : (
+				<Suspense fallback={<Spinner size="large" />}>
+					<MovieListPage loadingId={currentId} onMovieClick={handleMovieClick} />
+				</Suspense>
+			)}
+		</div>
 	);
 }
 

@@ -23,7 +23,10 @@ export default function MovieListPage(props) {
 					<MovieListItem
 						key={movie.id}
 						{...movie}
-						onClick={() => props.onMovieClick(movie.id)}
+						onClick={(e) => {
+							e.preventDefault();
+							props.onMovieClick(movie.id);
+						}}
 						isLoading={props.loadingId && movie.id === props.loadingId}
 					/>
 				))}
@@ -32,7 +35,7 @@ export default function MovieListPage(props) {
 	);
 }
 
-/** @param {{ isLoading: boolean | null | 0; onClick(): void; } & Movie} props */
+/** @param {{ isLoading: boolean | null | 0; onClick: React.MouseEventHandler<HTMLAnchorElement>; } & Movie} props */
 function MovieListItem(props) {
 	const opacity = props.isLoading === false ? 0.5 : 1;
 	return (
