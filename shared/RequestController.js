@@ -223,11 +223,6 @@ export class RequestController extends EventTarget {
 	 * @returns {void}
 	 */
 	#scheduleUpdate() {
-		// TODO: Do we need a mode? The controller should solely own the request state
-		// if (this.requests.size == 0 || this.mode !== "auto") {
-		// 	return;
-		// }
-
 		if (this.requests.size == 0) {
 			return;
 		}
@@ -250,7 +245,6 @@ export class RequestController extends EventTarget {
 			this.#timer = null;
 		}
 
-		// TODO: Does this equal `nextExpiration === this.#timer?.expiresAt`?
 		if (nextExpiration == null || (this.#timer && nextExpiration === this.#timer.expiresAt)) {
 			log("scheduleUpdate: No new timer needed");
 			return;

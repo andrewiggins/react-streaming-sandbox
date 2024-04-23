@@ -3,8 +3,11 @@ import path from "path";
 import sirv from "sirv";
 import { WebSocketServer } from "ws";
 import { getRequest, setResponse } from "./request-transform.js";
-import worker, { requestControllers } from "./_worker.js";
+import { handleRequest } from "./server.js";
 import debug from "debug";
+import { setupWebSocket } from "./websocket.js";
+
+debug.enable("RSS:*");
 
 // Make CustomEvents serializable.
 const proto = /** @type {any} */ (CustomEvent.prototype);
@@ -24,7 +27,7 @@ const base = "http://localhost:" + port;
 
 const server = createServer();
 const serveStatic = sirv(p("dist"), { dev: true });
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, path: "/request-controller" });
 
 wss.on("connection", function connection(ws, request) {
 	if (!request.url) throw new Error("No request URL");
@@ -34,136 +37,15 @@ wss.on("connection", function connection(ws, request) {
 
 server.on("request", async (incomingMessage, serverRes) => {
 	const request = await getRequest(base, incomingMessage);
+	const { pathname } = new URL(request.url, base);
 
-	let handled = false;
-	/** @type {Environment} */
-	const environment = {
-		ASSETS: {
-			async fetch() {
-				serveStatic(incomingMessage, serverRes);
-				handled = true;
-				return new Response();
-			},
-		},
-	};
-
-	const res = await worker.fetch(request, environment, {});
-	if (!handled) setResponse(serverRes, res);
-});
-
-// TODO: restrict websocket to /request-controller
-// server.on("upgrade", function upgrade(request, socket, head) {
-// 	const { pathname } = new URL(request.url, "wss://base.url");
-//
-// 	if (pathname === "/foo") {
-// 		wss1.handleUpgrade(request, socket, head, function done(ws) {
-// 			wss1.emit("connection", ws, request);
-// 		});
-// 	} else if (pathname === "/bar") {
-// 		wss2.handleUpgrade(request, socket, head, function done(ws) {
-// 			wss2.emit("connection", ws, request);
-// 		});
-// 	} else {
-// 		socket.destroy();
-// 	}
-// });
-
-server.listen(port);
-
-const webSocketLog = debug("RSS:webSocket");
-
-/** @type {(ws: import('ws').WebSocket, url: URL) => void} */
-function setupWebSocket(ws, url) {
-	const rcId = url.searchParams.get("rcId");
-	if (!rcId) throw new Error("Missing rcId param");
-
-	const rc = requestControllers.get(rcId);
-	if (!rc) {
-		console.warn("No request controller found for %s", rcId);
+	if (pathname === "/favicon.ico" || pathname.startsWith("/src/")) {
+		return serveStatic(incomingMessage, serverRes);
+	} else {
+		const res = await handleRequest(request);
+		setResponse(serverRes, res);
 		return;
 	}
+});
 
-	webSocketLog("Accepted WebSocket connection %s", rcId);
-
-	ws.addEventListener("open", () => {
-		webSocketLog("Connection opened %s", rcId);
-	});
-	ws.addEventListener("message", async (event) => {
-		await handleWebSocketMessage(rcId, ws, event.data);
-	});
-	ws.addEventListener("close", (event) => {
-		webSocketLog("Closing %s", rcId);
-		// TODO: Should I do this??
-		// requestControllers.delete(rcId);
-	});
-	ws.addEventListener("error", (event) => {
-		webSocketLog("Error: %s", event.error.stack);
-		// TODO: Should I do this??
-		// requestControllers.delete(rcId);
-	});
-
-	rc.addEventListener("new-request", async (event) => {
-		webSocketLog("Sending new request %s", event.detail.request.id);
-		ws.send(JSON.stringify(event));
-	});
-	rc.addEventListener("pause-request", async (event) => {
-		webSocketLog("Sending request pause %s", event.detail.request.id);
-		ws.send(JSON.stringify(event));
-	});
-	rc.addEventListener("resume-request", async (event) => {
-		webSocketLog("Sending request resume %s", event.detail.request.id);
-		ws.send(JSON.stringify(event));
-	});
-	rc.addEventListener("complete-request", async (event) => {
-		webSocketLog("Sending request complete %s", event.detail.request.id);
-		ws.send(JSON.stringify(event));
-	});
-
-	/** @type {SyncEvent} */
-	const syncEvent = new CustomEvent("sync-state", {
-		detail: { requests: Array.from(rc.requests.entries()), latency: rc.latency, areNewRequestsPaused: rc.areNewRequestsPaused },
-	});
-	ws.send(JSON.stringify(syncEvent));
-}
-
-/** @type {(rcId: string, ws: import('ws').WebSocket, message: Buffer[] | ArrayBuffer | string) => Promise<void>} */
-async function handleWebSocketMessage(rcId, ws, message) {
-	try {
-		/** @type {MockFetchDebuggerEventMap[MockFetchDebuggerEventType] | { type: "ping" } | undefined} */
-		let event;
-		try {
-			event = JSON.parse(message.toString());
-		} catch {}
-
-		const requestController = requestControllers.get(rcId);
-
-		if (!event) {
-			webSocketLog(`Received ${JSON.stringify(message)} which is not an JSON object. Ignoring...`);
-			return;
-		} else if (!requestController) {
-			webSocketLog(`Received ${JSON.stringify(event?.type ?? message)} but no request controller set. Ignoring...`);
-			return;
-		}
-
-		webSocketLog(`Received message %s`, message);
-
-		// Handle the message.
-		if (event.type === "ping") {
-			webSocketLog("Sending pong...");
-			ws.send(JSON.stringify({ type: "pong" }));
-		} else if (event.type === "request-pause") {
-			requestController.pause(event.detail.requestId);
-		} else if (event.type === "request-resume") {
-			requestController.resume(event.detail.requestId);
-		} else if (event.type === "request-new-request-paused") {
-			requestController.areNewRequestsPaused = event.detail.value;
-			ws.send(JSON.stringify({ type: "pause-new-requests", detail: { value: requestController.areNewRequestsPaused } }));
-		}
-	} catch (e) {
-		// Report any exceptions directly back to the client. As with our handleErrors() this
-		// probably isn't what you'd want to do in production, but it's convenient when testing.
-		const error = /** @type {Error} */ (e);
-		webSocketLog("Error: %s", error.stack);
-		ws.send(JSON.stringify({ error: error.stack }));
-	}
-}
+server.listen(port);

@@ -69,7 +69,6 @@ export default defineConfig((args) => {
 							// dynamically importing modules
 							inlineDynamicImports: true,
 						},
-						external: ["cloudflare:workers"],
 					}
 				: // Client Build
 					{
