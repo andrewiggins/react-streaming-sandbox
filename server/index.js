@@ -129,7 +129,7 @@ function setupWebSocket(ws, url) {
 /** @type {(rcId: string, ws: import('ws').WebSocket, message: Buffer[] | ArrayBuffer | string) => Promise<void>} */
 async function handleWebSocketMessage(rcId, ws, message) {
 	try {
-		/** @type {FetchDebuggerEventMap[FetchDebuggerEventType] | { type: "ping" } | undefined} */
+		/** @type {MockFetchDebuggerEventMap[MockFetchDebuggerEventType] | { type: "ping" } | undefined} */
 		let event;
 		try {
 			event = JSON.parse(message.toString());

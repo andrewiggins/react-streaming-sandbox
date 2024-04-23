@@ -56,7 +56,7 @@ class RemoteRequestController extends EventTarget {
 			console.log("RSS:RemoteRequestController - Received message %o", event.data);
 
 			const data = JSON.parse(event.data);
-			/** @type {MockRequestEventMap[keyof MockRequestEventMap]} */
+			/** @type {RequestControllerEventMap[keyof RequestControllerEventMap]} */
 			const requestEvent = new CustomEvent(data.type, { detail: data.detail });
 			this.dispatchEvent(requestEvent);
 		});
@@ -66,14 +66,14 @@ class RemoteRequestController extends EventTarget {
 
 	/** @type {(id: string) => void} */
 	pause(id) {
-		/** @type {FetchDebuggerEventMap["request-pause"]} */
+		/** @type {MockFetchDebuggerEventMap["request-pause"]} */
 		const event = new CustomEvent("request-pause", { detail: { requestId: id } });
 		this.webSocket.send(JSON.stringify(event));
 	}
 
 	/** @type {(id: string) => void} */
 	resume(id) {
-		/** @type {FetchDebuggerEventMap["request-resume"]} */
+		/** @type {MockFetchDebuggerEventMap["request-resume"]} */
 		const event = new CustomEvent("request-resume", { detail: { requestId: id } });
 		this.webSocket.send(JSON.stringify(event));
 	}

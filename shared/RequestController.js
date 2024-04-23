@@ -47,7 +47,7 @@ function createMockRequestPromise() {
 
 /**
  * @extends {CustomEvent<{ request: MockRequest }, Type>}
- * @template {MockRequestEventType} Type
+ * @template {RequestControllerEventType} Type
  */
 // Exported primarily for typing
 class MockRequestEvent extends CustomEvent {
@@ -64,7 +64,7 @@ class MockRequestEvent extends CustomEvent {
 	}
 }
 
-/** @extends {EventTarget<MockRequestEventMap>} */
+/** @extends {EventTarget<RequestControllerEventMap>} */
 export class RequestController extends EventTarget {
 	/**
 	 * @typedef {{ expiresAt: number; timeoutId: ReturnType<typeof setTimeout>; }} MockFetchTimer

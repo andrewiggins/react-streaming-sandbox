@@ -205,11 +205,11 @@ export class MockFetchDebugger extends HTMLElement {
 	/** @type {boolean} */
 	#areNewRequestsPaused;
 
-	/** @type {FetchDebuggerEventTarget["addEventListener"]} */
+	/** @type {MockFetchDebuggerEventTarget["addEventListener"]} */
 	addEventListener = this.addEventListener;
-	/** @type {FetchDebuggerEventTarget["removeEventListener"]} */
+	/** @type {MockFetchDebuggerEventTarget["removeEventListener"]} */
 	removeEventListener = this.removeEventListener;
-	/** @type {FetchDebuggerEventTarget["dispatchEvent"]} */
+	/** @type {MockFetchDebuggerEventTarget["dispatchEvent"]} */
 	dispatchEvent = this.dispatchEvent;
 
 	constructor() {

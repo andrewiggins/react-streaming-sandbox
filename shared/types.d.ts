@@ -13,13 +13,8 @@ interface MockRequest {
 	elapsedTime: number;
 }
 
-interface RequestControllerFacade extends EventTarget<MockRequestEventMap> {
-	pause(id: MockRequest["id"]): void;
-	resume(id: MockRequest["id"]): void;
-}
-
-type MockRequestEventType = keyof MockRequestEventMap;
-type MockRequestEvent<EventType> = CustomEvent<{ request: MockRequest }, EventType>;
+type RequestControllerEventType = keyof RequestControllerEventMap;
+type RequestControllerEvent<EventType> = CustomEvent<{ request: MockRequest }, EventType>;
 
 type SyncEvent = CustomEvent<
 	{
@@ -37,23 +32,28 @@ type PauseNewRequestsEvent = CustomEvent<
 	"pause-new-requests"
 >;
 
-interface MockRequestEventMap {
-	"new-request": MockRequestEvent<"new-request">;
-	"pause-request": MockRequestEvent<"pause-request">;
-	"resume-request": MockRequestEvent<"resume-request">;
-	"complete-request": MockRequestEvent<"complete-request">;
+interface RequestControllerEventMap {
+	"new-request": RequestControllerEvent<"new-request">;
+	"pause-request": RequestControllerEvent<"pause-request">;
+	"resume-request": RequestControllerEvent<"resume-request">;
+	"complete-request": RequestControllerEvent<"complete-request">;
 	"sync-state": SyncEvent;
 	"pause-new-requests": PauseNewRequestsEvent;
 }
 
-type FetchDebuggerEventType = keyof FetchDebuggerEventMap;
-interface FetchDebuggerEventMap {
+interface RequestControllerFacade extends EventTarget<RequestControllerEventMap> {
+	pause(id: MockRequest["id"]): void;
+	resume(id: MockRequest["id"]): void;
+}
+
+type MockFetchDebuggerEventType = keyof MockFetchDebuggerEventMap;
+interface MockFetchDebuggerEventMap {
 	"request-pause": CustomEvent<{ requestId: MockRequest["id"] }, "request-pause">;
 	"request-resume": CustomEvent<{ requestId: MockRequest["id"] }, "request-resume">;
 	"request-new-request-paused": CustomEvent<{ value: boolean }, "request-new-request-paused">;
 }
 
-type FetchDebuggerEventTarget = EventTarget<FetchDebuggerEventMap & HTMLElementEventMap>;
+type MockFetchDebuggerEventTarget = EventTarget<MockFetchDebuggerEventMap & HTMLElementEventMap>;
 
 // #region Generic EventTarget types
 class Event<EventType = string> {
