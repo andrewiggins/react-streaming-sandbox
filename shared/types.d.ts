@@ -18,7 +18,15 @@ interface MockRequest {
 type RequestControllerEventType = keyof RequestControllerEventMap;
 type RequestControllerEvent<EventType> = CustomEvent<{ request: MockRequest }, EventType>;
 
-type SyncRequests = CustomEvent<
+type SetNameEvent = CustomEvent<
+	{
+		rcId: string;
+		name: string;
+	},
+	"set-name"
+>;
+
+type SyncRequestsEvent = CustomEvent<
 	{
 		requests: Array<[string, MockRequest]>;
 	},
@@ -37,7 +45,8 @@ interface RequestControllerEventMap {
 	"pause-request": RequestControllerEvent<"pause-request">;
 	"resume-request": RequestControllerEvent<"resume-request">;
 	"complete-request": RequestControllerEvent<"complete-request">;
-	"sync-requests": SyncRequests;
+	"set-name": SetNameEvent;
+	"sync-requests": SyncRequestsEvent;
 	"pause-new-requests": PauseNewRequestsEvent;
 }
 
@@ -160,6 +169,16 @@ class Event<EventType = string> {
 	static readonly CAPTURING_PHASE: number;
 	static readonly AT_TARGET: number;
 	static readonly BUBBLING_PHASE: number;
+}
+
+interface EventInit {
+	bubbles?: boolean;
+	cancelable?: boolean;
+	composed?: boolean;
+}
+
+interface CustomEventInit<T = any> extends EventInit {
+	detail?: T;
 }
 
 class CustomEvent<Detail = any, EventType = string> extends Event<EventType> {

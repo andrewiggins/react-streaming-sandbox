@@ -163,11 +163,15 @@ function setupWebSocket(ws, url) {
 		ws.send(JSON.stringify(event));
 	});
 
-	/** @type {SyncRequests} */
+	/** @type {SyncRequestsEvent} */
 	const syncEvent = new CustomEvent("sync-requests", {
-		detail: { requests: Array.from(rc.requests.entries()), latency: rc.latency, areNewRequestsPaused: rc.areNewRequestsPaused },
+		detail: { requests: Array.from(rc.requests.entries()) },
 	});
 	ws.send(JSON.stringify(syncEvent));
+
+	/** @type {SetNameEvent} */
+	const setNameEvent = new CustomEvent("set-name", { detail: { rcId: rc.rcId, name: rc.name } });
+	ws.send(JSON.stringify(setNameEvent));
 }
 
 /** @type {(rcId: string, ws: import('ws').WebSocket, message: Buffer[] | ArrayBuffer | string) => Promise<void>} */
