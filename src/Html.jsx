@@ -6,7 +6,7 @@ export default function Html({ title, children, assets, rcId }) {
 				<meta charSet="UTF-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 				<title>{title}</title>
-				{assets && assets.css?.map((cssFile) => <link rel="stylesheet" href={cssFile} />)}
+				{assets && assets.css?.map((cssFile) => <link key={cssFile} rel="stylesheet" href={cssFile} />)}
 			</head>
 			<body>
 				{rcId && <script type="text/javascript" dangerouslySetInnerHTML={{ __html: `window.RCID = "${rcId.toString()}"` }}></script>}
