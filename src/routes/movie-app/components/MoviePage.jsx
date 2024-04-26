@@ -1,6 +1,6 @@
 import { use, Suspense } from "react";
 import Spinner from "./Spinner.jsx";
-import { fetchMovieDetails, fetchMovieReviews, fetchImage } from "../api/index.js";
+import { fetchMovieDetailsResource, fetchMovieReviewsResource, fetchImageResource } from "../api/index.js";
 
 // --------------------------
 // Individual movie page
@@ -28,7 +28,7 @@ export default function MoviePage(props) {
 
 /** @param {{ id: number; }} props */
 function MovieDetails(props) {
-	const movie = use(fetchMovieDetails(props.id));
+	const movie = use(fetchMovieDetailsResource(props.id));
 	return (
 		<div className="MovieDetails">
 			<MoviePoster src={movie.poster} />
@@ -40,7 +40,7 @@ function MovieDetails(props) {
 
 /** @param {{ src: string; } & React.DetailedHTMLProps<React.ImgHTMLAttributes<HTMLImageElement>, HTMLImageElement>} props */
 function Img({ src, ...rest }) {
-	return <img src={use(fetchImage(src))} {...rest} />;
+	return <img src={use(fetchImageResource(src))} {...rest} />;
 }
 
 /** @param {{ src: string }} props */
@@ -94,7 +94,7 @@ function MovieMetrics(props) {
 /** @param {{ id: number }} props */
 function MovieReviews(props) {
 	/** @type {MovieReview[]} */
-	const reviews = use(fetchMovieReviews(props.id));
+	const reviews = use(fetchMovieReviewsResource(props.id));
 	return (
 		<div className="MovieReviews">
 			{reviews.map((review) => (

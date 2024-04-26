@@ -659,12 +659,14 @@ export class MockFetchDebugger extends HTMLElement {
 		if (!completedList) throw new Error("completedList not found");
 
 		for (let request of finished) {
+			const rcName = this.requestControllers.get(request.rcId)?.name ?? "unknown";
+
 			shadowRoot.querySelector(`[data-req-id="${request.id}"]`)?.remove();
 			requests.delete(request.id);
 
 			/** @type {(event: { target: Element }) => void} */
 			const ontransitionend = (event) => event.target.remove();
-			const newItem = h("li", { ontransitionend }, getRequestName(request));
+			const newItem = h("li", { ontransitionend }, getRequestName(request) + ` (${rcName})`);
 
 			finishedItems.push(newItem);
 			completedList.appendChild(newItem);

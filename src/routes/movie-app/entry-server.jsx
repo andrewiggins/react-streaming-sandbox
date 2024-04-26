@@ -1,8 +1,22 @@
+import { renderToString } from "react-dom/server";
 import { renderToReadableStream } from "react-dom/server.edge";
 import App from "./components/App.jsx";
 
-/** @param {RootProps} props */
-export default async function render(props) {
+const useStream = true;
+
+/**
+ * @param {RootProps} props
+ * @returns {Promise<string>}
+ */
+async function renderAppToString(props) {
+	return renderToString(<App {...props} />);
+}
+
+/**
+ * @param {RootProps} props
+ * @returns {Promise<import("react-dom/server.edge").ReactDOMServerReadableStream>}
+ */
+async function renderAppToStream(props) {
 	const abortController = new AbortController();
 
 	const stream = await renderToReadableStream(<App {...props} />, {
@@ -28,3 +42,6 @@ export default async function render(props) {
 
 	return stream;
 }
+
+const render = useStream ? renderAppToStream : renderAppToString;
+export default render;

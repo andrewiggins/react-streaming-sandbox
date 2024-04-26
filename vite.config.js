@@ -19,7 +19,7 @@ const config = {
 	latest: {
 		version: "latest",
 		commit: "fdb368d9e",
-		buildType: "profiling.min",
+		buildType: "development",
 	},
 };
 

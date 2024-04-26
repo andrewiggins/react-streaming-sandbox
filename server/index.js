@@ -14,11 +14,13 @@ import helloWorldStreamRender from "../src/routes/hello-world-stream/entry-serve
 import helloWorldStringRender from "../src/routes/hello-world-string/entry-server.jsx";
 import movieAppRender from "../src/routes/movie-app/entry-server.jsx";
 import { getRequest, setResponse } from "./request-transform.js";
+import { setFetchCacheStore } from "../src/cache.js";
 
 const serverLog = debug("RSS:server");
 const webSocketLog = debug("RSS:webSocket");
 
 const fetchStore = new AsyncLocalStorage();
+const fetchCacheStore = new AsyncLocalStorage();
 
 // Make CustomEvents serializable.
 const proto = /** @type {any} */ (CustomEvent.prototype);
@@ -103,17 +105,24 @@ async function handleRequest(request) {
 		const rc = new RequestController(rcId, "server");
 		requestControllers.set(rcId, rc);
 
+		/** @type {FetchCache<any, any> | undefined} */
+		let fetchCache = new Map();
 		return fetchStore.run(rc.fetch, async () => {
-			serverLog("Dispatching %s", pathname);
-			const body = await route.render({ assets: route.assets, rcId });
-			if (typeof body !== "string") {
-				body.allReady.finally(() => {
+			return fetchCacheStore.run(fetchCache, async () => {
+				serverLog("Dispatching %s", pathname);
+				const body = await route.render({ assets: route.assets, rcId });
+				if (typeof body !== "string") {
+					body.allReady.finally(() => {
+						serverLog("Closing %s", pathname);
+						requestControllers.delete(rcId);
+					});
+				} else {
 					serverLog("Closing %s", pathname);
 					requestControllers.delete(rcId);
-				});
-			}
+				}
 
-			return createHtmlResponse(body);
+				return createHtmlResponse(body);
+			});
 		});
 	} else {
 		return new Response("Not found", { status: 404 });
@@ -224,6 +233,7 @@ function main() {
 	const wss = new WebSocketServer({ server, path: "/request-controller" });
 
 	setMockFetchStore(fetchStore);
+	setFetchCacheStore(fetchCacheStore);
 
 	wss.on("connection", function connection(ws, request) {
 		if (!request.url) throw new Error("No request URL");

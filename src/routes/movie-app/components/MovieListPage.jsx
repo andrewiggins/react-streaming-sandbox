@@ -1,6 +1,6 @@
 import { use } from "react";
 import Spinner from "./Spinner.jsx";
-import { fetchMovieList } from "../api/index.js";
+import { fetchMovieListResource } from "../api/index.js";
 
 // --------------------------
 // Movie list page
@@ -14,7 +14,7 @@ import { fetchMovieList } from "../api/index.js";
 
 /** @param {{ loadingId: number | null; onMovieClick(id: number): void; }} props */
 export default function MovieListPage(props) {
-	const movieList = use(fetchMovieList());
+	const movieList = use(fetchMovieListResource());
 	return (
 		<>
 			<h1 className="MovieListPage-header">Top Box Office {"🍿"}</h1>
