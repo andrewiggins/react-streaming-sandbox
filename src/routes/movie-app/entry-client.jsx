@@ -6,10 +6,11 @@ import { installMockFetch } from "../../fetch-debugger/mockFetch.js";
 installMockFetch();
 
 const assets = /** @type {any} */ (window).assetManifest;
+const remoteRCID = window.RCID;
 
 const concurrentMode = true;
 if (concurrentMode) {
-	hydrateRoot(document, <App assets={assets} />);
+	hydrateRoot(document, <App assets={assets} rcId={remoteRCID} />);
 } else {
 	hydrate(<App assets={assets} />, document);
 }
