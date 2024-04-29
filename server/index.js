@@ -6,7 +6,7 @@ import sirv from "sirv";
 import { WebSocketServer } from "ws";
 import viteManifest from "../dist/src/.vite/manifest.json";
 import { RequestController } from "../shared/RequestController.js";
-import { setMockFetchStore } from "../shared/fetch.js";
+import { createCachedFetch, setMockFetchStore } from "../shared/fetch.js";
 import renderIndex from "../src/index.jsx";
 import fixturesSsrRender from "../src/routes/fixtures-ssr/entry-server.jsx";
 import fixturesSsr2Render from "../src/routes/fixtures-ssr2/entry-server.jsx";
@@ -19,7 +19,9 @@ import { setFetchCacheStore } from "../shared/cache.js";
 const serverLog = debug("RSS:server");
 const webSocketLog = debug("RSS:webSocket");
 
+/** @type {AsyncLocalStorage<Fetch>} */
 const fetchStore = new AsyncLocalStorage();
+/** @type {AsyncLocalStorage<FetchCache>} */
 const fetchCacheStore = new AsyncLocalStorage();
 
 // Make CustomEvents serializable.
@@ -105,10 +107,12 @@ async function handleRequest(request) {
 		const rc = new RequestController(rcId, "server");
 		requestControllers.set(rcId, rc);
 
-		/** @type {FetchCache<any, any> | undefined} */
+		const fetch = createCachedFetch(rc.fetch.bind(rc));
+
+		/** @type {FetchCache | undefined} */
 		let fetchCache = new Map();
-		return fetchStore.run(rc.fetch, async () => {
-			return fetchCacheStore.run(fetchCache, async () => {
+		return fetchCacheStore.run(fetchCache, async () => {
+			return fetchStore.run(fetch, async () => {
 				serverLog("Dispatching %s", pathname);
 				const body = await route.render({ assets: route.assets, rcId });
 				if (typeof body !== "string") {

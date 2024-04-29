@@ -66,9 +66,12 @@ interface MockFetchDebuggerEventMap {
 
 type MockFetchDebuggerEventTarget = EventTarget<MockFetchDebuggerEventMap & HTMLElementEventMap>;
 
-interface FetchCache<K, V> {
+type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+type FetchStore = { getStore(): Fetch | undefined };
+
+interface BasicCache<K = any, V = any> {
 	/**
-	 * Removes the specified element from the WeakMap.
+	 * Removes the specified element from the Cache.
 	 * @returns true if the element was successfully removed, or false if it was not present.
 	 */
 	delete(key: K): void;
@@ -85,7 +88,13 @@ interface FetchCache<K, V> {
 	 * @param key Must be an object or symbol.
 	 */
 	set(key: K, value: V): void;
+	/**
+	 * Removes all elements from the cache.
+	 */
+	clear(): void;
 }
+
+type FetchCache = BasicCache<string, Promise<Response>>;
 
 // #region Generic EventTarget types
 class Event<EventType = string> {

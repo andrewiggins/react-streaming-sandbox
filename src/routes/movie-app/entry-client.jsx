@@ -1,7 +1,7 @@
 import { hydrateRoot } from "react-dom/client";
 import { hydrate } from "react-dom";
 import App from "./components/App.jsx";
-import { installMockFetch } from "../../fetch-debugger/mockFetch.js";
+import { installMockFetch } from "../../setup.js";
 
 installMockFetch();
 

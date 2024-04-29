@@ -23,7 +23,9 @@ async function main() {
 
 	if (!window.RCID) return;
 	window.fetchDebugger = getFetchDebugger();
-	window.fetchDebugger.attachRequestController(await createRemoteRequestController(window.RCID));
+
+	const serverRequestController = await createRemoteRequestController(window.RCID);
+	window.fetchDebugger.attachRequestController(serverRequestController);
 }
 
 main();

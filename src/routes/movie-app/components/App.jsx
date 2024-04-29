@@ -34,17 +34,16 @@ function App() {
 
 	/** @type {(id: number) => void} */
 	const handleMovieClick = useCallback((id) => {
-		// TODO: Enable MoviePage when it works
-		// setState({
-		// 	showDetail: false,
-		// 	currentId: id,
-		// });
-		// startTransition(() => {
-		// 	setState({
-		// 		showDetail: true,
-		// 		currentId: id,
-		// 	});
-		// });
+		setState({
+			showDetail: false,
+			currentId: id,
+		});
+		startTransition(() => {
+			setState({
+				showDetail: true,
+				currentId: id,
+			});
+		});
 	}, []);
 
 	/** @type {() => void} */

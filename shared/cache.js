@@ -1,20 +1,17 @@
 /**
- * @typedef {{ getStore(): FetchCache<any, any> | undefined }} CacheStore
- * @type {CacheStore | undefined} */
+ * @typedef {{ getStore(): FetchCache | undefined }} FetchCacheStore
+ * @type {FetchCacheStore | undefined}
+ */
 let cacheStore;
 
-/** @type {(store: cacheStore) => void} */
+/** @type {(store: cacheStore | undefined) => void} */
 export function setFetchCacheStore(store) {
 	cacheStore = store;
 }
 
-const defaultFetchCache = new Map();
-function getDefaultFetchCache() {
-	console.log("default cache used");
-	return defaultFetchCache;
-}
-
-/** @type {() => FetchCache<any, any>} */
+/** @type {() => FetchCache} */
 export function getFetchCache() {
-	return cacheStore?.getStore() ?? getDefaultFetchCache();
+	const cache = cacheStore?.getStore();
+	if (!cache) throw new Error("Fetch cache not set");
+	return cache;
 }
