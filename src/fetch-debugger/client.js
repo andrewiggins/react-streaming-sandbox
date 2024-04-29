@@ -1,3 +1,9 @@
+const color = "#9900FF";
+/** @type {(message: string, ...args: any[]) => void} */
+function log(message, ...args) {
+	console.log(`%cRSS:RemoteRequestController %c${message}`, `color: ${color}`, `color: inherit`, ...args);
+}
+
 // Make CustomEvents serializable.
 const proto = /** @type {any} */ (CustomEvent.prototype);
 proto.toJSON = function () {
@@ -55,11 +61,11 @@ class RemoteRequestController extends EventTarget {
 		this.webSocket = webSocket;
 
 		this.webSocket.addEventListener("message", (event) => {
-			console.log("RSS:RemoteRequestController - Received message %o", event.data);
-
 			const data = JSON.parse(event.data);
 			/** @type {RequestControllerEventMap[keyof RequestControllerEventMap]} */
 			const requestEvent = new CustomEvent(data.type, { detail: data.detail });
+
+			log("Received %s: %o", requestEvent.type, requestEvent.detail);
 
 			if (requestEvent.type === "set-name") {
 				this.name = requestEvent.detail.name;
