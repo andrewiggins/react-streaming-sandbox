@@ -1,10 +1,10 @@
 import { RequestController } from "../../shared/RequestController.js";
-import { setMockFetchStore } from "../fetch.js";
+import { setMockFetchStore } from "../../shared/fetch.js";
 
 /** @type {RequestController | null} */
 let requestController = null;
 
-/** @type {import('../fetch.js').Fetch} */
+/** @type {import('../../shared/fetch.js').Fetch} */
 function mockFetch(input) {
 	if (typeof window === "undefined") {
 		return Promise.resolve(new Response());

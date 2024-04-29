@@ -1,6 +1,6 @@
 import { movieDetailsJSON, movieListJSON, movieReviewsJSON } from "./data.js";
-import { getMockFetch } from "../../../fetch.js";
-import { getFetchCache } from "../../../cache.js";
+import { getMockFetch } from "../../../../shared/fetch.js";
+import { getFetchCache } from "../../../../shared/cache.js";
 
 /**
  * @overload

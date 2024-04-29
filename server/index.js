@@ -6,7 +6,7 @@ import sirv from "sirv";
 import { WebSocketServer } from "ws";
 import viteManifest from "../dist/src/.vite/manifest.json";
 import { RequestController } from "../shared/RequestController.js";
-import { setMockFetchStore } from "../src/fetch.js";
+import { setMockFetchStore } from "../shared/fetch.js";
 import renderIndex from "../src/index.jsx";
 import fixturesSsrRender from "../src/routes/fixtures-ssr/entry-server.jsx";
 import fixturesSsr2Render from "../src/routes/fixtures-ssr2/entry-server.jsx";
@@ -14,7 +14,7 @@ import helloWorldStreamRender from "../src/routes/hello-world-stream/entry-serve
 import helloWorldStringRender from "../src/routes/hello-world-string/entry-server.jsx";
 import movieAppRender from "../src/routes/movie-app/entry-server.jsx";
 import { getRequest, setResponse } from "./request-transform.js";
-import { setFetchCacheStore } from "../src/cache.js";
+import { setFetchCacheStore } from "../shared/cache.js";
 
 const serverLog = debug("RSS:server");
 const webSocketLog = debug("RSS:webSocket");
