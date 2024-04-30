@@ -28,4 +28,14 @@ async function main() {
 	window.fetchDebugger.attachRequestController(serverRequestController);
 }
 
+let lastTime = performance.now();
+/** @type {(label: string) => void} */
+function logTime(label) {
+	const currentTime = performance.now();
+	console.log(label, (currentTime - lastTime).toFixed(2) + "ms");
+	lastTime = currentTime;
+}
+
+window.logTime = logTime;
+
 main();

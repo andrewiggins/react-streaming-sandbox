@@ -38,7 +38,6 @@ declare module "react-dom/server.edge" {
 }
 
 interface Window {
-	RCID?: string;
 	scrollTo(x: number, y: number): void;
 }
 

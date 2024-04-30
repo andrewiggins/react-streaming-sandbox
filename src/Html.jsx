@@ -13,9 +13,9 @@ export default function Html({ title, children, assets, rcId }) {
 			<body>
 				{rcId && <script type="text/javascript" dangerouslySetInnerHTML={{ __html: `window.RCID = "${rcId.toString()}"` }}></script>}
 				{rcId && <script type="text/javascript" src="/src/fetch-debugger.js"></script>}
-				<script type="text/javascript" dangerouslySetInnerHTML={{ __html: 'console.log("pre-root");' }}></script>
+				<script type="text/javascript" dangerouslySetInnerHTML={{ __html: 'logTime("pre-root:");' }}></script>
 				<div id="root">{children}</div>
-				<script type="text/javascript" dangerouslySetInnerHTML={{ __html: 'console.log("post-root");' }}></script>
+				<script type="text/javascript" dangerouslySetInnerHTML={{ __html: 'logTime("post-root");' }}></script>
 				{assets?.js && <script src={assets.js} type="module"></script>}
 			</body>
 		</html>
