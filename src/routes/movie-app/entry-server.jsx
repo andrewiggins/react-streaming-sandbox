@@ -19,7 +19,9 @@ async function renderAppToString(props) {
 async function renderAppToStream(props) {
 	const abortController = new AbortController();
 
-	const stream = await renderToReadableStream(<App {...props} />, {
+	/** @type {RootProps} */
+	const appProps = { ...props, assets: { ...props.assets, js: "" } };
+	const stream = await renderToReadableStream(<App {...appProps} />, {
 		bootstrapModules: [props.assets.js],
 		// onShellReady() {
 		// 	// If something errored before we started streaming, we set the error code appropriately.
