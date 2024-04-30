@@ -194,6 +194,8 @@ class DraggableDialog extends HTMLElement {
 }
 
 const fadeOutDuration = 7000;
+const fadeOutDelay = 3000;
+const fadeOutTotalTime = fadeOutDuration + fadeOutDelay;
 /** @type {(cb: FrameRequestCallback) => void} */
 function afterNextFrame(cb) {
 	requestAnimationFrame(() => requestAnimationFrame(cb));
@@ -332,7 +334,7 @@ export class MockFetchDebugger extends HTMLElement {
 			}
 
 			#completed li {
-				transition: opacity 3s ease-in ${fadeOutDuration}ms;
+				transition: opacity ${fadeOutDelay}ms ease-in ${fadeOutDuration}ms;
 				opacity: 1;
 				min-height: 22px;
 				margin: 0.15rem 0;
@@ -692,7 +694,7 @@ export class MockFetchDebugger extends HTMLElement {
 			// ahead and remove them ourselves after the transition is complete.
 			setTimeout(() => {
 				finishedItems.forEach((li) => li.remove());
-			}, fadeOutDuration + 100);
+			}, fadeOutTotalTime + 100);
 		}
 
 		if (this.#animationsEnabled && isRunning) {
