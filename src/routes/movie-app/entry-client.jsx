@@ -10,7 +10,9 @@ const remoteRCID = window.RCID;
 
 const concurrentMode = true;
 if (concurrentMode) {
-	hydrateRoot(document, <App assets={assets} rcId={remoteRCID} />);
+	console.log("Hydrating with concurrent mode");
+	hydrateRoot(document, <App url={location.href} assets={assets} rcId={remoteRCID} />);
 } else {
-	hydrate(<App assets={assets} />, document);
+	console.log("Hydrating legacy mode");
+	hydrate(<App url={location.href} assets={assets} />, document);
 }

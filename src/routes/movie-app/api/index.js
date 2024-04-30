@@ -21,7 +21,6 @@ export async function fetchMovieReviews(id) {
 
 /** @type {(src: string) => Promise<string>} */
 export async function fetchImage(imgPath) {
-	const imgSrc = `/src${imgPath}`;
 	const fetch = await getMockFetch();
-	return fetch(imgSrc).then(() => imgSrc);
+	return fetch(imgPath).then(() => imgPath);
 }

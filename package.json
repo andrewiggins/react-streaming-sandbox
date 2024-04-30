@@ -52,6 +52,7 @@
     "debug": "^4.3.4",
     "set-cookie-parser": "^2.6.0",
     "sirv": "^2.0.4",
+    "urlpattern-polyfill": "^10.0.0",
     "ws": "^8.16.0"
   }
 }

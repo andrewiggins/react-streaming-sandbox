@@ -229,7 +229,8 @@ export class MockFetchDebugger extends HTMLElement {
 			:host {
 				display: block;
 				padding: 0.125rem 0.5rem 1.1rem 0.5rem;
-				min-width: 200px;
+				/* min-width: 200px; */
+				width: 200px;
 			}
 
 			:host([hidden]) { display: none; }

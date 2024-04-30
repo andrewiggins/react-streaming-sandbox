@@ -12,21 +12,35 @@ export default function Root(props) {
 		<Html {...props} title="Movie App">
 			<Suspense fallback={<Spinner size="large" />}>
 				<ErrorBoundary FallbackComponent={ErrorPage}>
-					<App />
+					<App initialUrl={props.url} />
 				</ErrorBoundary>
 			</Suspense>
 		</Html>
 	);
 }
 
+const moviePageRoute = new URLPattern({ pathname: "/movie-app/movie/:id" });
+
 /**
  * @typedef {{ showDetail: false; currentId: null;  }} ListAppState
  * @typedef {{ showDetail: false; currentId: number;  }} LoadingDetailAppState
  * @typedef {{ showDetail: true; currentId: number;  }} DetailAppState
  * @typedef {ListAppState | LoadingDetailAppState | DetailAppState} AppState
+ *
+ * @param {{ initialUrl: string }} props
  */
-function App() {
-	const [state, setState] = useState(/** @type {AppState} */ ({ showDetail: false, currentId: null }));
+function App({ initialUrl }) {
+	const [state, setState] = useState(
+		/** @type {() => AppState} */ () => {
+			const match = moviePageRoute.exec(initialUrl);
+			if (match) {
+				const id = Number(match.pathname.groups.id);
+				return { showDetail: true, currentId: id };
+			}
+
+			return { showDetail: false, currentId: null };
+		},
+	);
 
 	useEffect(() => {
 		window?.scrollTo(0, 0);

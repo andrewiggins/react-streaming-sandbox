@@ -40,7 +40,13 @@ function MovieDetails(props) {
 
 /** @param {{ src: string; } & React.DetailedHTMLProps<React.ImgHTMLAttributes<HTMLImageElement>, HTMLImageElement>} props */
 function Img({ src, ...rest }) {
-	return <img src={use(fetchImage(src))} {...rest} />;
+	const imgUrl = `/src${src}`;
+
+	if (typeof window === "undefined") {
+		return <img src={imgUrl} {...rest} />;
+	} else {
+		return <img src={use(fetchImage(imgUrl))} {...rest} />;
+	}
 }
 
 /** @param {{ src: string }} props */

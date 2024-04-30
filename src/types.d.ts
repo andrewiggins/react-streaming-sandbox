@@ -48,14 +48,16 @@ interface Assets {
 }
 
 interface RootProps {
+	url: string;
 	assets: Assets;
 	rcId?: string;
 }
 
-interface Routes {
-	[routePath: string]: {
-		label: string;
-		render(props: RootProps): Promise<string | import("react-dom/server.edge").ReactDOMServerReadableStream>;
-		assets: Assets;
-	};
+type Routes = Record<string, Route>;
+
+interface Route {
+	label: string;
+	pattern: import("urlpattern-polyfill").URLPattern;
+	render(props: RootProps): Promise<string | import("react-dom/server.edge").ReactDOMServerReadableStream>;
+	assets: Assets;
 }

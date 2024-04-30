@@ -1,3 +1,4 @@
+import "urlpattern-polyfill";
 import debug from "debug";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createServer } from "node:http";
@@ -64,30 +65,42 @@ function getAssets(entry) {
 
 /** @type {Routes} */
 const routes = {
+	"/": {
+		label: "Home",
+		render: () => renderIndex(routes),
+		assets: { js: "", css: [] },
+		pattern: new URLPattern({ pathname: "/" }),
+	},
 	"/hello-world-string/": {
 		label: "Hello world string SSR",
 		render: helloWorldStringRender,
 		assets: getAssets("src/routes/hello-world-string/entry-client.jsx"),
+		pattern: new URLPattern({ pathname: "/hello-world-string/" }),
 	},
 	"/hello-world-stream/": {
 		label: "Hello world streaming SSR",
 		render: helloWorldStreamRender,
 		assets: getAssets("src/routes/hello-world-stream/entry-client.jsx"),
+		pattern: new URLPattern({ pathname: "/hello-world-stream/" }),
 	},
 	"/fixtures-ssr/": {
 		label: "Fixtures SSR",
 		render: fixturesSsrRender,
 		assets: getAssets("src/routes/fixtures-ssr/entry-client.jsx"),
+		pattern: new URLPattern({ pathname: "/fixtures-ssr/" }),
 	},
 	"/fixtures-ssr2/": {
 		label: "Fixtures SSR 2",
 		render: fixturesSsr2Render,
 		assets: getAssets("src/routes/fixtures-ssr2/entry-client.jsx"),
+		pattern: new URLPattern({ pathname: "/fixtures-ssr2/" }),
 	},
 	"/movie-app/": {
 		label: "Movie App",
 		render: movieAppRender,
 		assets: getAssets("src/routes/movie-app/entry-client.jsx"),
+		// pattern: new URLPattern({ pathname: "/movie-app/*" }), // TODO: enable when I have a client-side Router
+		pattern: new URLPattern({ pathname: "/movie-app/" }),
 	},
 };
 
@@ -99,38 +112,36 @@ async function handleRequest(request) {
 	const url = new URL(request.url);
 	const pathname = url.pathname;
 
-	if (pathname === "/") {
-		return createHtmlResponse(await renderIndex(routes));
-	} else if (pathname in routes) {
-		const route = routes[pathname];
-		const rcId = crypto.randomUUID();
-		const rc = new RequestController(rcId, "server");
-		requestControllers.set(rcId, rc);
-
-		const fetch = createCachedFetch(rc.fetch.bind(rc));
-
-		/** @type {FetchCache | undefined} */
-		let fetchCache = new Map();
-		return fetchCacheStore.run(fetchCache, async () => {
-			return fetchStore.run(fetch, async () => {
-				serverLog("Dispatching %s", pathname);
-				const body = await route.render({ assets: route.assets, rcId });
-				if (typeof body !== "string") {
-					body.allReady.finally(() => {
-						serverLog("Closing %s", pathname);
-						requestControllers.delete(rcId);
-					});
-				} else {
-					serverLog("Closing %s", pathname);
-					requestControllers.delete(rcId);
-				}
-
-				return createHtmlResponse(body);
-			});
-		});
-	} else {
+	const route = Object.values(routes).find((route) => route.pattern.test(url.toString()));
+	if (!route) {
 		return new Response("Not found", { status: 404 });
 	}
+
+	const rcId = crypto.randomUUID();
+	const rc = new RequestController(rcId, "server");
+	requestControllers.set(rcId, rc);
+
+	const fetch = createCachedFetch(rc.fetch.bind(rc));
+
+	/** @type {FetchCache | undefined} */
+	let fetchCache = new Map();
+	return fetchCacheStore.run(fetchCache, async () => {
+		return fetchStore.run(fetch, async () => {
+			serverLog("Dispatching %s", pathname);
+			const body = await route.render({ url: url.href, assets: route.assets, rcId });
+			if (typeof body !== "string") {
+				body.allReady.finally(() => {
+					serverLog("Closing %s", pathname);
+					requestControllers.delete(rcId);
+				});
+			} else {
+				serverLog("Closing %s", pathname);
+				requestControllers.delete(rcId);
+			}
+
+			return createHtmlResponse(body);
+		});
+	});
 }
 
 /** @type {(ws: import('ws').WebSocket, url: URL) => void} */
