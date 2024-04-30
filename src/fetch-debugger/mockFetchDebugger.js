@@ -207,6 +207,8 @@ export class MockFetchDebugger extends HTMLElement {
 	#latencyMs = 3 * 1000;
 	/** @type {boolean} */
 	#areNewRequestsPaused = false;
+	/**	@type {boolean} */
+	#animationsEnabled = true;
 
 	/** @type {Map<string, MockRequest>} */
 	requests = new Map();
@@ -396,6 +398,14 @@ export class MockFetchDebugger extends HTMLElement {
 
 			requestController.resume(event.detail.requestId);
 		});
+	}
+
+	get animationEnabled() {
+		return this.#animationsEnabled;
+	}
+	set animationEnabled(newAnimation) {
+		this.#animationsEnabled = newAnimation;
+		this.#scheduleUpdate();
 	}
 
 	get latencyMs() {
@@ -685,7 +695,7 @@ export class MockFetchDebugger extends HTMLElement {
 			}, fadeOutDuration + 100);
 		}
 
-		if (isRunning) {
+		if (this.#animationsEnabled && isRunning) {
 			this.#scheduleUpdate();
 		}
 	}
