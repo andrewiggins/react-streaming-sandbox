@@ -40,14 +40,10 @@ const clientFetchCache = {
 let clientRequestController = null;
 
 /** @type {Fetch} */
-function mockFetch(input) {
-	if (typeof window === "undefined") {
-		return Promise.resolve(new Response());
-	}
-
+async function mockFetch(input) {
 	if (!clientRequestController) {
 		clientRequestController = new RequestController(crypto.randomUUID(), "client");
-		window.fetchDebugger?.attachRequestController(clientRequestController);
+		await window.fetchDebugger?.attachRequestController(clientRequestController);
 	}
 
 	return clientRequestController.fetch(input);

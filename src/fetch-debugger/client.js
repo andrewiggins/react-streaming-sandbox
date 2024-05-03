@@ -112,6 +112,16 @@ class RemoteRequestController extends EventTarget {
 		return this.#sendRequest("resume", [id]);
 	}
 
+	/** @type {(value: boolean) => Promise<void>} */
+	async setPauseNewRequests(value) {
+		return this.#sendRequest("setPauseNewRequests", [value]);
+	}
+
+	/** @type {(latency: number) => Promise<void>} */
+	async setLatency(latency) {
+		return this.#sendRequest("setLatency", [latency]);
+	}
+
 	/**
 	 * @template {keyof RemoteRequestControllerRPC} Method
 	 * @param {Method} method

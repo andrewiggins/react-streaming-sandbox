@@ -335,6 +335,11 @@ export class MockFetchDebugger extends HTMLElement {
 		`;
 		this.shadowRoot?.appendChild(style);
 
+		try {
+			this.#areNewRequestsPaused = localStorage.getItem("mock-fetch-debugger:pause-new") === "true";
+			this.#latencyMs = parseInt(localStorage.getItem("mock-fetch-debugger:latency") || "3000", 10);
+		} catch {}
+
 		const body = [
 			h("label", { for: "latency" }, "Latency: ", h("span", { id: "latency-label" })),
 			h(
@@ -347,7 +352,9 @@ export class MockFetchDebugger extends HTMLElement {
 					max: "10000",
 					step: "500",
 					value: this.#latencyMs,
-					oninput: () => this.#updateLatency(),
+					oninput: () => {
+						this.#updateLatency();
+					},
 				}),
 			),
 			h(
@@ -358,8 +365,7 @@ export class MockFetchDebugger extends HTMLElement {
 					type: "checkbox",
 					/** @type {(event: any) => void} */
 					oninput: (event) => {
-						const target = event.currentTarget;
-						this.areNewRequestsPaused = target.checked;
+						this.onToggleNewRequestsPaused(event.currentTarget.checked);
 					},
 					checked: this.#areNewRequestsPaused,
 				}),
@@ -380,22 +386,6 @@ export class MockFetchDebugger extends HTMLElement {
 	}
 	set animationEnabled(newAnimation) {
 		this.#animationsEnabled = newAnimation;
-		this.#scheduleUpdate();
-	}
-
-	get latencyMs() {
-		return this.#latencyMs;
-	}
-	set latencyMs(newLatency) {
-		this.#latencyMs = newLatency;
-		this.#scheduleUpdate();
-	}
-
-	get areNewRequestsPaused() {
-		return this.#areNewRequestsPaused;
-	}
-	set areNewRequestsPaused(newPaused) {
-		this.#areNewRequestsPaused = newPaused;
 		this.#scheduleUpdate();
 	}
 
@@ -423,8 +413,20 @@ export class MockFetchDebugger extends HTMLElement {
 		}
 	}
 
-	/** @type {(requestController: RequestControllerFacade) => void} */
-	attachRequestController(requestController) {
+	/** @type {(newValue: boolean) => Promise<void>} */
+	async onToggleNewRequestsPaused(newValue) {
+		const requestControllers = Array.from(this.requestControllers.values());
+		await Promise.all(requestControllers.map((rc) => rc.setPauseNewRequests(newValue)));
+		this.#areNewRequestsPaused = newValue;
+		this.#scheduleUpdate();
+
+		try {
+			localStorage.setItem("mock-fetch-debugger:pause-new", newValue.toString());
+		} catch {}
+	}
+
+	/** @type {(requestController: RequestControllerFacade) => Promise<void>} */
+	async attachRequestController(requestController) {
 		this.requestControllers.set(requestController.rcId, requestController);
 
 		requestController.addEventListener("new-request", (event) => {
@@ -447,6 +449,14 @@ export class MockFetchDebugger extends HTMLElement {
 
 			this.#scheduleUpdate();
 		});
+
+		requestController.addEventListener("disconnect", () => {
+			this.requestControllers.delete(requestController.rcId);
+			this.#scheduleUpdate();
+		});
+
+		await requestController.setPauseNewRequests(this.#areNewRequestsPaused);
+		await requestController.setLatency(this.#latencyMs);
 	}
 
 	/** @type {(request: MockRequest) => void} */
@@ -511,17 +521,25 @@ export class MockFetchDebugger extends HTMLElement {
 		return newList;
 	}
 
-	#updateLatency() {
+	async #updateLatency() {
 		/** @type {HTMLInputElement} */
 		// @ts-expect-error
-		const latency = this.shadowRoot?.getElementById("latency");
-		this.#latencyMs = latency.valueAsNumber;
-		const latencySec = (latency.valueAsNumber / 1000).toFixed(1);
+		const latencyInput = this.shadowRoot?.getElementById("latency");
+		const newLatency = latencyInput.valueAsNumber;
+
+		await Promise.all(Array.from(this.requestControllers.values()).map((rc) => rc.setLatency(newLatency)));
+
+		const latencySec = (newLatency / 1000).toFixed(1);
 		const latencyLabel = this.shadowRoot?.getElementById("latency-label");
 		const pluralEnding = latencySec == "1.0" ? "" : "s";
 
 		if (!latencyLabel) throw new Error("latencyLabel not found");
 		latencyLabel.textContent = `${latencySec} second${pluralEnding}`;
+
+		this.#latencyMs = newLatency;
+		try {
+			localStorage.setItem("mock-fetch-debugger:latency", newLatency.toString());
+		} catch {}
 	}
 
 	/** @type {boolean} */

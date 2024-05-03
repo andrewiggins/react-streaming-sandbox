@@ -27,6 +27,7 @@ interface RequestControllerEventMap {
 		},
 		"sync-requests"
 	>;
+	disconnect: CustomEvent<{ rcId: string }, "disconnect">;
 }
 
 interface RequestControllerFacade extends EventTarget<RequestControllerEventMap> {
@@ -34,6 +35,8 @@ interface RequestControllerFacade extends EventTarget<RequestControllerEventMap>
 	get name(): string;
 	pause(id: MockRequest["id"]): Promise<MockRequest | null>;
 	resume(id: MockRequest["id"]): Promise<MockRequest | null>;
+	setPauseNewRequests(value: boolean): Promise<void>;
+	setLatency(value: number): Promise<void>;
 }
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
@@ -86,6 +89,8 @@ interface RemoteRequestControllerRPC {
 	ping: RPCRequest<"ping">;
 	pause: RPCRequest<"pause", [MockRequest["id"]]>;
 	resume: RPCRequest<"resume", [MockRequest["id"]]>;
+	setPauseNewRequests: RPCRequest<"setPauseNewRequests", [boolean]>;
+	setLatency: RPCRequest<"setLatency", [number]>;
 }
 
 // #region Generic EventTarget types

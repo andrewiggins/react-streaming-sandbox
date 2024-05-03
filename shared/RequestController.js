@@ -89,6 +89,12 @@ export class RequestController extends EventTarget {
 	 */
 	#timer = null;
 
+	/** @type {boolean} */
+	#areNewRequestsPaused = false;
+
+	/** @type {number} */
+	#latency = 3 * 1000;
+
 	/**
 	 * @param {string} rcId The ID for the RequestControllerClientConnection durable object
 	 * @param {string} name The name of the request controller
@@ -98,10 +104,7 @@ export class RequestController extends EventTarget {
 
 		/** @type {string} */
 		this.name = name;
-		/** @type {boolean} */
-		this.areNewRequestsPaused = false;
-		/** @type {number} */
-		this.latency = 3 * 1000;
+		/** @type {string} */
 		this.rcId = rcId;
 
 		/** @type {Map<string, MockRequest>} */
@@ -119,8 +122,8 @@ export class RequestController extends EventTarget {
 
 		const request = createMockRequest(input, requestInit, {
 			rcId: this.rcId,
-			latency: this.latency,
-			paused: this.areNewRequestsPaused,
+			latency: this.#latency,
+			paused: this.#areNewRequestsPaused,
 		});
 
 		this.requests.set(request.id, request);
@@ -185,6 +188,16 @@ export class RequestController extends EventTarget {
 
 		this.#scheduleUpdate();
 		return request;
+	}
+
+	/** @type {(value: boolean) => Promise<void>} */
+	async setPauseNewRequests(value) {
+		this.#areNewRequestsPaused = value;
+	}
+
+	/** @type {(latency: number) => Promise<void>} */
+	async setLatency(latency) {
+		this.#latency = latency;
 	}
 
 	/**

@@ -106,6 +106,8 @@ const routes = {
 
 /** @type {Map<string, RequestController>} */
 const requestControllers = new Map();
+/** @type {Map<string, Array<import('ws').WebSocket>>} */
+const webSockets = new Map();
 
 /** @type {(request: Request) => Promise<Response>} */
 async function handleRequest(request) {
@@ -129,14 +131,21 @@ async function handleRequest(request) {
 		return fetchStore.run(fetch, async () => {
 			serverLog("Dispatching %s", pathname);
 			const body = await route.render({ url: url.href, assets: route.assets, rcId });
-			if (typeof body !== "string") {
-				body.allReady.finally(() => {
-					serverLog("Closing %s", pathname);
-					requestControllers.delete(rcId);
-				});
-			} else {
+
+			function cleanup() {
 				serverLog("Closing %s", pathname);
 				requestControllers.delete(rcId);
+
+				/** @type {RequestControllerEventMap["disconnect"]} */
+				const msg = new CustomEvent("disconnect", { detail: { rcId } });
+				webSockets.get(rcId)?.forEach((ws) => ws.send(JSON.stringify(msg)));
+				webSockets.delete(rcId);
+			}
+
+			if (typeof body !== "string") {
+				body.allReady.finally(() => cleanup());
+			} else {
+				cleanup();
 			}
 
 			return createHtmlResponse(body);
@@ -154,6 +163,12 @@ function setupWebSocket(ws, url) {
 		console.warn("No request controller found for %s", rcId);
 		return;
 	}
+
+	if (!webSockets.has(rcId)) {
+		webSockets.set(rcId, []);
+	}
+	// @ts-expect-error
+	webSockets.get(rcId).push(ws);
 
 	webSocketLog("Accepted WebSocket connection %s", rcId);
 
@@ -219,6 +234,12 @@ async function handleWebSocketMessage(rcId, ws, message) {
 		} else if (msg.method === "resume") {
 			const newRequest = await requestController.resume(msg.params[0]);
 			response = { id, result: newRequest };
+		} else if (msg.method === "setPauseNewRequests") {
+			await requestController.setPauseNewRequests(msg.params[0]);
+			response = { id };
+		} else if (msg.method === "setLatency") {
+			await requestController.setLatency(msg.params[0]);
+			response = { id };
 		} else {
 			response = { id, error: { code: 404, message: "Unknown method" } };
 		}
