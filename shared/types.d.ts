@@ -16,55 +16,25 @@ interface MockRequest {
 }
 
 type RequestControllerEventType = keyof RequestControllerEventMap;
-type RequestControllerEvent<EventType> = CustomEvent<{ request: MockRequest }, EventType>;
-
-type SetNameEvent = CustomEvent<
-	{
-		rcId: string;
-		name: string;
-	},
-	"set-name"
->;
-
-type SyncRequestsEvent = CustomEvent<
-	{
-		requests: Array<[string, MockRequest]>;
-	},
-	"sync-requests"
->;
-
-type PauseNewRequestsEvent = CustomEvent<
-	{
-		value: boolean;
-	},
-	"pause-new-requests"
->;
-
 interface RequestControllerEventMap {
-	"new-request": RequestControllerEvent<"new-request">;
-	"pause-request": RequestControllerEvent<"pause-request">;
-	"resume-request": RequestControllerEvent<"resume-request">;
-	"complete-request": RequestControllerEvent<"complete-request">;
-	"set-name": SetNameEvent;
-	"sync-requests": SyncRequestsEvent;
-	"pause-new-requests": PauseNewRequestsEvent;
+	"new-request": CustomEvent<{ request: MockRequest }, "new-request">;
+	// "pause-request": CustomEvent<{ request: MockRequest }, "pause-request">;
+	// "resume-request": CustomEvent<{ request: MockRequest }, "resume-request">
+	"complete-request": CustomEvent<{ request: MockRequest }, "complete-request">;
+	"sync-requests": CustomEvent<
+		{
+			requests: Array<[string, MockRequest]>;
+		},
+		"sync-requests"
+	>;
 }
 
 interface RequestControllerFacade extends EventTarget<RequestControllerEventMap> {
 	get rcId(): string;
 	get name(): string;
-	pause(id: MockRequest["id"]): void;
-	resume(id: MockRequest["id"]): void;
+	pause(id: MockRequest["id"]): Promise<MockRequest | null>;
+	resume(id: MockRequest["id"]): Promise<MockRequest | null>;
 }
-
-type MockFetchDebuggerEventType = keyof MockFetchDebuggerEventMap;
-interface MockFetchDebuggerEventMap {
-	"request-pause": CustomEvent<{ requestId: MockRequest["id"] }, "request-pause">;
-	"request-resume": CustomEvent<{ requestId: MockRequest["id"] }, "request-resume">;
-	"request-new-request-paused": CustomEvent<{ value: boolean }, "request-new-request-paused">;
-}
-
-type MockFetchDebuggerEventTarget = EventTarget<MockFetchDebuggerEventMap & HTMLElementEventMap>;
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 type FetchStore = { getStore(): Fetch | undefined };
@@ -95,6 +65,28 @@ interface BasicCache<K = any, V = any> {
 }
 
 type FetchCache = BasicCache<string, Promise<Response>>;
+
+interface RPCRequest<Method, Params = undefined> {
+	id: string;
+	method: Method;
+	params: Params;
+}
+
+interface RPCResponse<Result> {
+	id: string;
+	result?: Result;
+	error?: {
+		code: number;
+		message: string;
+		data?: any;
+	};
+}
+
+interface RemoteRequestControllerRPC {
+	ping: RPCRequest<"ping">;
+	pause: RPCRequest<"pause", [MockRequest["id"]]>;
+	resume: RPCRequest<"resume", [MockRequest["id"]]>;
+}
 
 // #region Generic EventTarget types
 class Event<EventType = string> {

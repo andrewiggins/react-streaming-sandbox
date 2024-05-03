@@ -47,53 +47,100 @@ function createWebSocket(path) {
 /** @implements {RequestControllerFacade} */
 class RemoteRequestController extends EventTarget {
 	/**
+	 * @typedef {Promise<Request> & { resolve(request: Request): void; reject(error: any): void; }} RPCPromise
+	 * @type {Map<string, RPCPromise>}
+	 */
+	#openRequests = new Map();
+
+	/**
+	 * @param {string} name
 	 * @param {string} rcId
 	 * @param {WebSocket} webSocket
 	 */
-	constructor(rcId, webSocket) {
+	constructor(name, rcId, webSocket) {
 		super();
 
 		/** @type {string} */
 		this.rcId = rcId;
 		/** @type {string} */
-		this.name = "remote";
+		this.name = name;
 		/** @type {WebSocket} */
 		this.webSocket = webSocket;
 
 		this.webSocket.addEventListener("message", (event) => {
+			// TODO:
+
+			/** @type {RPCResponse<any> | RequestControllerEventMap[keyof RequestControllerEventMap]} */
 			const data = JSON.parse(event.data);
-			/** @type {RequestControllerEventMap[keyof RequestControllerEventMap]} */
-			const requestEvent = new CustomEvent(data.type, { detail: data.detail });
+			if ("id" in data) {
+				const p = this.#openRequests.get(data.id);
+				if (!p) {
+					log("Received response for unknown request %s", data.id);
+					return;
+				}
 
-			log("Received %s: %o", requestEvent.type, requestEvent.detail);
+				if (data.error) {
+					/** @type {any} */
+					const error = new Error(data.error.message);
+					error.data = data.error;
+					p.reject(error);
+				} else {
+					p.resolve(data.result);
+				}
 
-			if (requestEvent.type === "set-name") {
-				this.name = requestEvent.detail.name;
+				this.#openRequests.delete(data.id);
+				return;
 			}
 
+			const requestEvent = new CustomEvent(data.type, { detail: data.detail });
+			log("Received %s: %o", requestEvent.type, requestEvent.detail);
 			this.dispatchEvent(requestEvent);
 		});
 
-		this.webSocket.send(`{"type":"ping"}`);
+		this.#sendRequest("ping", undefined).then((response) => {
+			log(`Ping received "%s"`, response);
+		});
 	}
 
-	/** @type {(id: string) => void} */
-	pause(id) {
-		/** @type {MockFetchDebuggerEventMap["request-pause"]} */
-		const event = new CustomEvent("request-pause", { detail: { requestId: id } });
-		this.webSocket.send(JSON.stringify(event));
+	/** @type {(id: string) => Promise<MockRequest | null>} */
+	async pause(id) {
+		return this.#sendRequest("pause", [id]);
 	}
 
-	/** @type {(id: string) => void} */
-	resume(id) {
-		/** @type {MockFetchDebuggerEventMap["request-resume"]} */
-		const event = new CustomEvent("request-resume", { detail: { requestId: id } });
-		this.webSocket.send(JSON.stringify(event));
+	/** @type {(id: string) => Promise<MockRequest | null>} */
+	async resume(id) {
+		return this.#sendRequest("resume", [id]);
+	}
+
+	/**
+	 * @template {keyof RemoteRequestControllerRPC} Method
+	 * @param {Method} method
+	 * @param {RemoteRequestControllerRPC[Method]["params"]} params
+	 * @returns {Promise<any>}
+	 */
+	async #sendRequest(method, params) {
+		let resolver, rejecter;
+		const p = /** @type {RPCPromise} */ (
+			new Promise((resolve, reject) => {
+				resolver = resolve;
+				rejecter = reject;
+			})
+		);
+
+		p.resolve = /** @type {any} */ (resolver);
+		p.reject = /** @type {any} */ (rejecter);
+
+		const id = crypto.randomUUID();
+		this.#openRequests.set(id, p);
+
+		this.webSocket.send(JSON.stringify({ id, method, params }));
+
+		return p;
 	}
 }
 
 /** @type {(rcId: string) => Promise<RequestControllerFacade>} */
 export async function createRemoteRequestController(rcId) {
 	const webSocket = await createWebSocket(`/request-controller?rcId=${rcId}`);
-	return new RemoteRequestController(rcId, webSocket);
+	return new RemoteRequestController("server", rcId, webSocket);
 }

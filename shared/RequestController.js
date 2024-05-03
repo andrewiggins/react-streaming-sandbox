@@ -78,7 +78,10 @@ class MockRequestEvent extends CustomEvent {
 	}
 }
 
-/** @extends {EventTarget<RequestControllerEventMap>} */
+/**
+ * @extends {EventTarget<RequestControllerEventMap>}
+ * @implements {RequestControllerFacade}
+ */
 export class RequestController extends EventTarget {
 	/**
 	 * @typedef {{ expiresAt: number; timeoutId: ReturnType<typeof setTimeout>; }} MockFetchTimer
@@ -123,14 +126,10 @@ export class RequestController extends EventTarget {
 		this.requests.set(request.id, request);
 		this.dispatchEvent(new MockRequestEvent("new-request", request));
 
-		if (this.areNewRequestsPaused) {
-			this.dispatchEvent(new MockRequestEvent("pause-request", request));
-		} else {
-			this.#scheduleUpdate();
-		}
-
 		const requestPromise = createMockRequestPromise();
 		this.mockRequestsPromises.set(request, requestPromise);
+
+		this.#scheduleUpdate();
 
 		return requestPromise.then(() => new Response());
 	};
@@ -138,42 +137,42 @@ export class RequestController extends EventTarget {
 	/**
 	 * Pause the given request if it is currently inflight
 	 * @param {string} id
-	 * @returns {void}
+	 * @returns {Promise<MockRequest | null>}
 	 */
-	pause(id) {
+	async pause(id) {
 		log("pause %s", id);
 
 		const request = this.requests.get(id);
 		if (!request) {
 			log(`pause: no request with id "${id}" exists.`);
-			return;
+			return null;
 		}
 
 		const now = Date.now();
 		if (request.expiresAt == null || now > request.expiresAt) {
 			// Request already paused or completed
-			return;
+			return request;
 		}
 
 		request.elapsedTime = request.latency - (request.expiresAt - now);
 		request.expiresAt = null;
 
-		this.dispatchEvent(new MockRequestEvent("pause-request", request));
-		this.#resolveRequests(now);
+		this.#scheduleUpdate();
+		return request;
 	}
 
 	/**
 	 * Resume the given request if it was paused
 	 * @param {string} id
-	 * @returns {void}
+	 * @returns {Promise<MockRequest | null>}
 	 */
-	resume(id) {
+	async resume(id) {
 		log("resume %s", id);
 
 		const request = this.requests.get(id);
 		if (!request) {
 			log(`resume: no request with id "${id}" exists.`);
-			return;
+			return null;
 		}
 
 		if (request.expiresAt != null) {
@@ -184,8 +183,8 @@ export class RequestController extends EventTarget {
 		const remainingTime = request.latency - request.elapsedTime;
 		request.expiresAt = now + remainingTime;
 
-		this.dispatchEvent(new MockRequestEvent("resume-request", request));
-		this.#resolveRequests(now);
+		this.#scheduleUpdate();
+		return request;
 	}
 
 	/**
@@ -193,10 +192,10 @@ export class RequestController extends EventTarget {
 	 *
 	 * `now` is a parameter to assist in debugging so that time doesn't continue when
 	 * debugging. If it did, requests could "expire" while stepping through code
-	 * @param {number} now
+	 * @param {number} [now]
 	 * @returns {void}
 	 */
-	#resolveRequests(now) {
+	#completeRequests(now = Date.now()) {
 		log("resolveRequests %d", now);
 
 		/** @type {MockRequest[]} */
@@ -224,8 +223,6 @@ export class RequestController extends EventTarget {
 			this.requests.delete(request.id);
 			this.mockRequestsPromises.delete(request);
 		}
-
-		this.#scheduleUpdate();
 	}
 
 	/**
@@ -248,8 +245,8 @@ export class RequestController extends EventTarget {
 		}
 
 		if (this.#timer && (nextExpiration == null || nextExpiration !== this.#timer.expiresAt)) {
-			// If there is an existing timer, and no next request or the timer expires a
-			// different time than the next request, clear the exiting timer.
+			// If there is an existing timer, and no next request or the timer expires at a
+			// different time than the next request, clear the existing timer.
 			log("scheduleUpdate: clearing existing timer (%d)", this.#timer.timeoutId);
 			clearTimeout(this.#timer.timeoutId);
 			this.#timer = null;
@@ -266,7 +263,8 @@ export class RequestController extends EventTarget {
 		timeoutId = setTimeout(() => {
 			log("scheduleUpdate: timer expired (%d)", timeoutId);
 			this.#timer = null;
-			this.#resolveRequests(Date.now());
+			this.#completeRequests();
+			this.#scheduleUpdate();
 		}, timeout);
 		log("scheduleUpdate: created timer (%d) for %d ms", timeoutId, timeout);
 		this.#timer = { timeoutId, expiresAt: nextExpiration };

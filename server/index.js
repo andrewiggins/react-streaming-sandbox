@@ -174,63 +174,57 @@ function setupWebSocket(ws, url) {
 		webSocketLog("Sending new request %s", event.detail.request.id);
 		ws.send(JSON.stringify(event));
 	});
-	rc.addEventListener("pause-request", async (event) => {
-		webSocketLog("Sending request pause %s", event.detail.request.id);
-		ws.send(JSON.stringify(event));
-	});
-	rc.addEventListener("resume-request", async (event) => {
-		webSocketLog("Sending request resume %s", event.detail.request.id);
-		ws.send(JSON.stringify(event));
-	});
 	rc.addEventListener("complete-request", async (event) => {
 		webSocketLog("Sending request complete %s", event.detail.request.id);
 		ws.send(JSON.stringify(event));
 	});
 
-	/** @type {SyncRequestsEvent} */
+	/** @type {RequestControllerEventMap["sync-requests"]} */
 	const syncEvent = new CustomEvent("sync-requests", {
 		detail: { requests: Array.from(rc.requests.entries()) },
 	});
 	ws.send(JSON.stringify(syncEvent));
-
-	/** @type {SetNameEvent} */
-	const setNameEvent = new CustomEvent("set-name", { detail: { rcId: rc.rcId, name: rc.name } });
-	ws.send(JSON.stringify(setNameEvent));
 }
 
 /** @type {(rcId: string, ws: import('ws').WebSocket, message: Buffer[] | ArrayBuffer | string) => Promise<void>} */
 async function handleWebSocketMessage(rcId, ws, message) {
 	try {
-		/** @type {MockFetchDebuggerEventMap[MockFetchDebuggerEventType] | { type: "ping" } | undefined} */
-		let event;
+		/** @type {RemoteRequestControllerRPC[keyof RemoteRequestControllerRPC] | undefined} */
+		let msg;
 		try {
-			event = JSON.parse(message.toString());
+			msg = JSON.parse(message.toString());
 		} catch {}
 
 		const requestController = requestControllers.get(rcId);
 
-		if (!event) {
+		if (!msg) {
 			webSocketLog(`Received ${JSON.stringify(message)} which is not an JSON object. Ignoring...`);
 			return;
 		} else if (!requestController) {
-			webSocketLog(`Received ${JSON.stringify(event?.type ?? message)} but no request controller set. Ignoring...`);
+			webSocketLog(`Received ${JSON.stringify(msg?.method ?? message)} but no request controller set. Ignoring...`);
 			return;
 		}
 
 		webSocketLog(`Received message %s`, message);
 
 		// Handle the message.
-		if (event.type === "ping") {
-			webSocketLog("Sending pong...");
-			ws.send(JSON.stringify({ type: "pong" }));
-		} else if (event.type === "request-pause") {
-			requestController.pause(event.detail.requestId);
-		} else if (event.type === "request-resume") {
-			requestController.resume(event.detail.requestId);
-		} else if (event.type === "request-new-request-paused") {
-			requestController.areNewRequestsPaused = event.detail.value;
-			ws.send(JSON.stringify({ type: "pause-new-requests", detail: { value: requestController.areNewRequestsPaused } }));
+		const id = msg.id;
+		/** @type {RPCResponse<any>} */
+		let response;
+		if (msg.method === "ping") {
+			response = { id, result: "pong" };
+		} else if (msg.method === "pause") {
+			const newRequest = await requestController.pause(msg.params[0]);
+			response = { id, result: newRequest };
+		} else if (msg.method === "resume") {
+			const newRequest = await requestController.resume(msg.params[0]);
+			response = { id, result: newRequest };
+		} else {
+			response = { id, error: { code: 404, message: "Unknown method" } };
 		}
+
+		webSocketLog(`Sending response "${JSON.stringify(response)}"...`);
+		ws.send(JSON.stringify(response));
 	} catch (e) {
 		// Report any exceptions directly back to the client. As with our handleErrors() this
 		// probably isn't what you'd want to do in production, but it's convenient when testing.

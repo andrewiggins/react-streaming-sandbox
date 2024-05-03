@@ -217,13 +217,6 @@ export class MockFetchDebugger extends HTMLElement {
 	/** @type {Map<string, RequestControllerFacade>} */
 	requestControllers = new Map();
 
-	/** @type {MockFetchDebuggerEventTarget["addEventListener"]} */
-	addEventListener = this.addEventListener;
-	/** @type {MockFetchDebuggerEventTarget["removeEventListener"]} */
-	removeEventListener = this.removeEventListener;
-	/** @type {MockFetchDebuggerEventTarget["dispatchEvent"]} */
-	dispatchEvent = this.dispatchEvent;
-
 	constructor() {
 		super();
 		this.attachShadow({ mode: "open" });
@@ -380,26 +373,6 @@ export class MockFetchDebugger extends HTMLElement {
 		body.forEach((child) => this.shadowRoot?.appendChild(child));
 		this.#updateLatency();
 		this.#scheduleUpdate();
-
-		this.addEventListener("request-pause", (event) => {
-			const request = this.requests.get(event.detail.requestId);
-			if (!request) throw new Error(`No request with id "${event.detail.requestId}" exists.`);
-
-			const requestController = this.requestControllers.get(request.rcId);
-			if (!requestController) throw new Error(`No request controller found for ${request.rcId}`);
-
-			requestController.pause(event.detail.requestId);
-		});
-
-		this.addEventListener("request-resume", (event) => {
-			const request = this.requests.get(event.detail.requestId);
-			if (!request) throw new Error(`No request with id "${event.detail.requestId}" exists.`);
-
-			const requestController = this.requestControllers.get(request.rcId);
-			if (!requestController) throw new Error(`No request controller found for ${request.rcId}`);
-
-			requestController.resume(event.detail.requestId);
-		});
 	}
 
 	get animationEnabled() {
@@ -434,12 +407,19 @@ export class MockFetchDebugger extends HTMLElement {
 		this.#scheduleUpdate();
 	}
 
-	/** @type {(request: MockRequest) => void} */
-	onToggleRequest(request) {
+	/** @type {(request: MockRequest) => Promise<void>} */
+	async onToggleRequest(request) {
+		const requestController = this.requestControllers.get(request.rcId);
+		if (!requestController) throw new Error(`No request controller found for ${request.rcId}`);
+
 		if (request.expiresAt == null) {
-			this.dispatchEvent(new CustomEvent("request-resume", { detail: { requestId: request.id } }));
+			const newRequest = await requestController.resume(request.id);
+			if (!newRequest) throw new Error(`No request with id "${request.id}" exists.`);
+			this.#resumeRequest(newRequest);
 		} else {
-			this.dispatchEvent(new CustomEvent("request-pause", { detail: { requestId: request.id } }));
+			const newRequest = await requestController.pause(request.id);
+			if (!newRequest) throw new Error(`No request with id "${request.id}" exists.`);
+			this.#pauseRequest(newRequest);
 		}
 	}
 
@@ -448,26 +428,18 @@ export class MockFetchDebugger extends HTMLElement {
 		this.requestControllers.set(requestController.rcId, requestController);
 
 		requestController.addEventListener("new-request", (event) => {
-			this.addRequest(event.detail.request);
-		});
-
-		requestController.addEventListener("pause-request", (event) => {
-			this.pauseRequest(event.detail.request);
-		});
-
-		requestController.addEventListener("resume-request", (event) => {
-			this.resumeRequest(event.detail.request);
+			this.#addRequest(event.detail.request);
 		});
 
 		requestController.addEventListener("complete-request", (event) => {
-			this.completeRequest(event.detail.request);
+			this.#completeRequest(event.detail.request);
 		});
 
 		requestController.addEventListener("sync-requests", (event) => {
 			event.detail.requests.forEach(([id, request]) => {
 				const existingRequest = this.requests.get(id);
 				if (!existingRequest) {
-					this.addRequest(request);
+					this.#addRequest(request);
 				} else {
 					this.requests.set(existingRequest.id, { ...existingRequest, ...request });
 				}
@@ -478,7 +450,7 @@ export class MockFetchDebugger extends HTMLElement {
 	}
 
 	/** @type {(request: MockRequest) => void} */
-	addRequest(request) {
+	#addRequest(request) {
 		if (this.requests.has(request.id)) {
 			console.warn(`Request with id "${request.id}" already exists.`);
 			this.requests.delete(request.id);
@@ -489,7 +461,7 @@ export class MockFetchDebugger extends HTMLElement {
 	}
 
 	/** @type {(request: MockRequest) => void} */
-	pauseRequest(r) {
+	#pauseRequest(r) {
 		const request = this.#getInternalRequest(r);
 
 		request.expiresAt = null;
@@ -497,14 +469,14 @@ export class MockFetchDebugger extends HTMLElement {
 	}
 
 	/** @type {(request: MockRequest) => void} */
-	resumeRequest(r) {
+	#resumeRequest(r) {
 		const request = this.#getInternalRequest(r);
 		request.expiresAt = r.expiresAt;
 		this.#scheduleUpdate();
 	}
 
 	/** @type {(request: MockRequest) => void} */
-	completeRequest(r) {
+	#completeRequest(r) {
 		const request = this.#getInternalRequest(r);
 
 		request.expiresAt = 0;
