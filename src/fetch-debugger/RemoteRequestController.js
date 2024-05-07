@@ -67,33 +67,7 @@ class RemoteRequestController extends EventTarget {
 		/** @type {WebSocket} */
 		this.webSocket = webSocket;
 
-		this.webSocket.addEventListener("message", (event) => {
-			/** @type {RPCResponse<any> | RequestControllerEventMap[keyof RequestControllerEventMap]} */
-			const data = JSON.parse(event.data);
-			if ("id" in data) {
-				const p = this.#openRequests.get(data.id);
-				if (!p) {
-					log("Received response for unknown request %s", data.id);
-					return;
-				}
-
-				if (data.error) {
-					/** @type {any} */
-					const error = new Error(data.error.message);
-					error.data = data.error;
-					p.reject(error);
-				} else {
-					p.resolve(data.result);
-				}
-
-				this.#openRequests.delete(data.id);
-				return;
-			}
-
-			const requestEvent = new CustomEvent(data.type, { detail: data.detail });
-			log("Received %s: %o", requestEvent.type, requestEvent.detail);
-			this.dispatchEvent(requestEvent);
-		});
+		this.webSocket.addEventListener("message", (event) => this.#handleMessage(event));
 
 		this.#sendRequest("ping", undefined).then((response) => {
 			log(`Ping received "%s"`, response);
@@ -144,6 +118,35 @@ class RemoteRequestController extends EventTarget {
 		this.webSocket.send(JSON.stringify({ id, method, params }));
 
 		return p;
+	}
+
+	/** @type {(event: MessageEvent) => void} */
+	#handleMessage(event) {
+		/** @type {RPCResponse<any> | RequestControllerEventMap[keyof RequestControllerEventMap]} */
+		const data = JSON.parse(event.data);
+		if ("id" in data) {
+			const p = this.#openRequests.get(data.id);
+			if (!p) {
+				log("Received response for unknown request %s", data.id);
+				return;
+			}
+
+			if (data.error) {
+				/** @type {any} */
+				const error = new Error(data.error.message);
+				error.data = data.error;
+				p.reject(error);
+			} else {
+				p.resolve(data.result);
+			}
+
+			this.#openRequests.delete(data.id);
+			return;
+		}
+
+		const requestEvent = new CustomEvent(data.type, { detail: data.detail });
+		log("Received %s: %o", requestEvent.type, requestEvent.detail);
+		this.dispatchEvent(requestEvent);
 	}
 }
 
