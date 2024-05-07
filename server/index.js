@@ -109,6 +109,17 @@ const requestControllers = new Map();
 /** @type {Map<string, Array<import('ws').WebSocket>>} */
 const webSockets = new Map();
 
+/** @type {(rcId: string, pathname: string) => void} */
+function finishRequest(rcId, pathname) {
+	serverLog("Closing %s", pathname);
+	requestControllers.delete(rcId);
+
+	/** @type {RequestControllerEventMap["disconnect"]} */
+	const msg = new CustomEvent("disconnect", { detail: { rcId } });
+	webSockets.get(rcId)?.forEach((ws) => ws.send(JSON.stringify(msg)));
+	webSockets.delete(rcId);
+}
+
 /** @type {(request: Request) => Promise<Response>} */
 async function handleRequest(request) {
 	const url = new URL(request.url);
@@ -132,20 +143,10 @@ async function handleRequest(request) {
 			serverLog("Dispatching %s", pathname);
 			const body = await route.render({ url: url.href, assets: route.assets, rcId });
 
-			function cleanup() {
-				serverLog("Closing %s", pathname);
-				requestControllers.delete(rcId);
-
-				/** @type {RequestControllerEventMap["disconnect"]} */
-				const msg = new CustomEvent("disconnect", { detail: { rcId } });
-				webSockets.get(rcId)?.forEach((ws) => ws.send(JSON.stringify(msg)));
-				webSockets.delete(rcId);
-			}
-
 			if (typeof body !== "string") {
-				body.allReady.finally(() => cleanup());
+				body.allReady.finally(() => finishRequest(rcId, pathname));
 			} else {
-				cleanup();
+				finishRequest(rcId, pathname);
 			}
 
 			return createHtmlResponse(body);

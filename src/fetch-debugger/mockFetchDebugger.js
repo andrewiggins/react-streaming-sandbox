@@ -450,16 +450,27 @@ export class MockFetchDebugger extends HTMLElement {
 			this.#scheduleUpdate();
 		});
 
-		requestController.addEventListener("disconnect", () => {
-			this.requestControllers.delete(requestController.rcId);
-			this.#scheduleUpdate();
+		requestController.addEventListener("disconnect", async () => {
+			// Wait for any pending requests to complete
+			await this.#scheduleUpdate();
+
+			// Force remaining requests to complete
+			const rcId = requestController.rcId;
+			await Promise.all(
+				Array.from(this.requests.values())
+					.filter((r) => r.rcId === rcId)
+					.map((r) => this.#completeRequest(r)),
+			);
+
+			// Finally delete requestController
+			this.requestControllers.delete(rcId);
 		});
 
 		await requestController.setPauseNewRequests(this.#areNewRequestsPaused);
 		await requestController.setLatency(this.#latencyMs);
 	}
 
-	/** @type {(request: MockRequest) => void} */
+	/** @type {(request: MockRequest) => Promise<void>} */
 	#addRequest(request) {
 		if (this.requests.has(request.id)) {
 			console.warn(`Request with id "${request.id}" already exists.`);
@@ -467,30 +478,30 @@ export class MockFetchDebugger extends HTMLElement {
 		}
 
 		this.requests.set(request.id, request);
-		this.#scheduleUpdate();
+		return this.#scheduleUpdate();
 	}
 
-	/** @type {(request: MockRequest) => void} */
+	/** @type {(request: MockRequest) => Promise<void>} */
 	#pauseRequest(r) {
 		const request = this.#getInternalRequest(r);
 
 		request.expiresAt = null;
-		this.#scheduleUpdate();
+		return this.#scheduleUpdate();
 	}
 
-	/** @type {(request: MockRequest) => void} */
+	/** @type {(request: MockRequest) => Promise<void>} */
 	#resumeRequest(r) {
 		const request = this.#getInternalRequest(r);
 		request.expiresAt = r.expiresAt;
-		this.#scheduleUpdate();
+		return this.#scheduleUpdate();
 	}
 
-	/** @type {(request: MockRequest) => void} */
+	/** @type {(request: MockRequest) => Promise<void>} */
 	#completeRequest(r) {
 		const request = this.#getInternalRequest(r);
 
 		request.expiresAt = 0;
-		this.#scheduleUpdate();
+		return this.#scheduleUpdate();
 	}
 
 	/** @type {(r: MockRequest) => MockRequest} */
@@ -542,15 +553,21 @@ export class MockFetchDebugger extends HTMLElement {
 		} catch {}
 	}
 
-	/** @type {boolean} */
-	#isUpdateScheduled = false;
+	/** @type {Promise<void> | undefined} */
+	#updatePromise;
+	/** @type {() => Promise<void>} */
 	#scheduleUpdate() {
-		if (this.#isUpdateScheduled) return;
-		this.#isUpdateScheduled = true;
-		requestAnimationFrame(() => {
-			this.#isUpdateScheduled = false;
-			this.#update();
-		});
+		if (!this.#updatePromise) {
+			this.#updatePromise = new Promise((resolve) => {
+				requestAnimationFrame(() => {
+					this.#updatePromise = undefined;
+					this.#update();
+					resolve();
+				});
+			});
+		}
+
+		return this.#updatePromise;
 	}
 
 	#update() {

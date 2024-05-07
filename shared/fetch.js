@@ -30,7 +30,6 @@ function isGETRequest(input, requestInit) {
 /** @type {(fetch: Fetch) => Fetch} */
 export function createCachedFetch(fetch) {
 	return (input, requestInit) => {
-		/** @type {FetchCache} */
 		const cache = getFetchCache();
 		if (!cache) {
 			fetchCacheLog("No cache store found");
@@ -52,6 +51,7 @@ export function createCachedFetch(fetch) {
 				return fetch(input, requestInit);
 			}
 
+			// Clone the response so that it can be consumed multiple times
 			return responsePromise.then((res) => res.clone());
 		}
 

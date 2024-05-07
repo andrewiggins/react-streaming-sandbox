@@ -68,8 +68,6 @@ class RemoteRequestController extends EventTarget {
 		this.webSocket = webSocket;
 
 		this.webSocket.addEventListener("message", (event) => {
-			// TODO:
-
 			/** @type {RPCResponse<any> | RequestControllerEventMap[keyof RequestControllerEventMap]} */
 			const data = JSON.parse(event.data);
 			if ("id" in data) {
