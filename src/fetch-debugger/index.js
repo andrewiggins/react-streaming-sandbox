@@ -1,4 +1,4 @@
-import { createRemoteRequestController } from "./client.js";
+import { createRemoteRequestController } from "./RemoteRequestController.js";
 import { MockFetchDebugger, installFetchDebugger } from "./mockFetchDebugger.js";
 
 /** @type {MockFetchDebugger | null} */
