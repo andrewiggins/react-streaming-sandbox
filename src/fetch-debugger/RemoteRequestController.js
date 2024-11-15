@@ -153,5 +153,5 @@ class RemoteRequestController extends EventTarget {
 /** @type {(rcId: string) => Promise<RequestControllerFacade>} */
 export async function createRemoteRequestController(rcId) {
 	const webSocket = await createWebSocket(`/request-controller?rcId=${rcId}`);
-	return new RemoteRequestController("server", rcId, webSocket);
+	return new RemoteRequestController("SSR", rcId, webSocket);
 }

@@ -116,7 +116,11 @@ function finishRequest(rcId, pathname) {
 
 	/** @type {RequestControllerEventMap["disconnect"]} */
 	const msg = new CustomEvent("disconnect", { detail: { rcId } });
-	webSockets.get(rcId)?.forEach((ws) => ws.send(JSON.stringify(msg)));
+	webSockets.get(rcId)?.forEach((ws) => {
+		ws.send(JSON.stringify(msg));
+		ws.close();
+	});
+
 	webSockets.delete(rcId);
 }
 

@@ -67,7 +67,7 @@ interface BasicCache<K = any, V = any> {
 	clear(): void;
 }
 
-type FetchCache = BasicCache<string, Promise<Response>>;
+type FetchCache = BasicCache<string, Promise<any>>;
 
 interface RPCRequest<Method, Params = undefined> {
 	id: string;
