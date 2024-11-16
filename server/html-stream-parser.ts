@@ -280,13 +280,11 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 	};
 }
 
-const EMPTY_BUFFER = Buffer.alloc(0);
-
 // The parser class
 export class HtmlStreamParser extends Transform {
 	private bodyDepth = -1;
 
-	private remaining: Buffer = EMPTY_BUFFER;
+	private pendingChunk: Buffer | null = null;
 
 	private parseChunk: ParseChunk;
 
@@ -321,27 +319,38 @@ export class HtmlStreamParser extends Transform {
 		return this.isDirectChildOfBody;
 	};
 
+	processPendingChunk() {
+		if (this.pendingChunk == null) {
+			return;
+		}
+
+		const pendingChunk = this.pendingChunk;
+		this.pendingChunk = null;
+
+		const lastIndex = this.parseChunk(pendingChunk);
+
+		if (lastIndex < pendingChunk.length) {
+			const parsed = pendingChunk.subarray(0, lastIndex);
+			this.pendingChunk = pendingChunk.subarray(lastIndex);
+			this.push(parsed);
+
+			process.nextTick(() => this.processPendingChunk());
+		} else {
+			this.push(pendingChunk);
+		}
+	}
+
 	// The _transform function is called by the stream whenever there is new data
 	// to process. We process the data and emit events whenever we detect a state
 	// change that is relevant to our use case.
 	_transform(chunk: any, _: BufferEncoding, callback: TransformCallback) {
-		if (this.remaining?.length > 0) {
-			chunk = Buffer.concat([this.remaining, chunk]);
-			this.remaining = EMPTY_BUFFER;
-		}
-
-		const lastIndex = this.parseChunk(chunk);
-
-		if (lastIndex < chunk.length) {
-			const parsed = chunk.subarray(0, lastIndex);
-			this.remaining = chunk.subarray(lastIndex);
-			this.push(parsed);
-
-			// TODO: Queue up another flush? to not wait for more data?
+		if (this.pendingChunk == null) {
+			this.pendingChunk = chunk;
 		} else {
-			this.push(chunk);
+			this.pendingChunk = Buffer.concat([this.pendingChunk, chunk]);
 		}
 
+		this.processPendingChunk();
 		callback();
 	}
 }
