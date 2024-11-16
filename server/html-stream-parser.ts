@@ -8,26 +8,53 @@
 // emits events when it detects the state changes that are relevant to our use
 // case. We don't decode the HTML stream, we just look for the relevant tags
 // and keep track of the nesting level of the tags we are interested in.
+//
+// Based on htmlparser2, MIT LICENSE
+//  Source: https://github.com/acrazing/html5parser/blob/cc95ffc4b50d99e64a477eb34934113f2d0ca3c4/src/tokenize.ts
+// LICENSE: https://github.com/acrazing/html5parser/blob/cc95ffc4b50d99e64a477eb34934113f2d0ca3c4/LICENSE
 import type { TransformCallback } from "node:stream";
 import { Transform } from "node:stream";
 
 /** @import { TransformCallback } from "node:stream"; */
 
 // The parser states
-const TEXT = 0; // Parsing text
-const BEFORE_TAG_NAME = 1; // Parsing before a tag name
-const IN_TAG_NAME = 2; // Parsing a tag name
-const IN_SELF_CLOSING_TAG = 3; // Parsing a self-closing tag
-const IN_TAG = 4; // Parsing a tag
-
-const BEFORE_CLOSING_TAG_NAME = 5; // Parsing before a closing tag name
-const IN_CLOSING_TAG_NAME = 6; // Parsing a closing tag name
-const AFTER_CLOSING_TAG_NAME = 7; // Parsing after a closing tag name
+// The parser states
+const TEXT = 0;
+const BEFORE_OPEN_TAG = 1;
+const OPENING_TAG = 2;
+const AFTER_OPENING_TAG = 3;
+const IN_VALUE_NO_QUOTES = 4;
+const IN_VALUE_SINGLE_QUOTES = 5;
+const IN_VALUE_DOUBLE_QUOTES = 6;
+const CLOSING_OPEN_TAG = 7;
+const OPENING_SPECIAL = 8;
+const OPENING_DOCTYPE = 9;
+const OPENING_NORMAL_COMMENT = 10;
+const NORMAL_COMMENT_START = 11;
+const IN_NORMAL_COMMENT = 12;
+const IN_SHORT_COMMENT = 13;
+const CLOSING_NORMAL_COMMENT = 14;
+const CLOSING_NORMAL_COMMENT_2 = 15;
+const CLOSING_TAG = 16;
 
 // Special characters
-const START_NODE = 0x3c; // <
-const CLOSE_NODE = 0x3e; // >
-const SLASH = 0x2f; // /
+const EXCLAMATION = 33; // !
+const DASH = 45; // -
+const SLASH = 47; // /
+/** > greater than */
+const CLOSE_NODE = 62; // >
+/** < Less than */
+const START_NODE = 60; // <
+const QUESTION = 63; // ?
+const SINGLE_QUOTE = 39; // '
+const DOUBLE_QUOTE = 34; // "
+const EQUAL = 61; // =
+const CAPITAL_A = 65; // A
+const CAPITAL_D = 68; // D
+const CAPITAL_Z = 90; // Z
+const LOWERCASE_A = 97; // a
+const LOWERCASE_D = 100; // d
+const LOWERCASE_Z = 122; // z
 
 const isWhitespace = (c: number) =>
 	c === 9 || // Tab '\t'
@@ -58,12 +85,6 @@ function isVoidElement(name: string): boolean {
 	);
 }
 
-// Test cases:
-// self closing tag <meta />
-// void tags <img> <br> <hr>
-// <body />
-// <body></body>
-
 type ParseChunk = (chunk: Buffer) => number;
 
 export function createParser(handleOpenTag: (name: string) => boolean, handleCloseTag: (name: string) => boolean): ParseChunk {
@@ -74,35 +95,37 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 		let shouldPause = false;
 		let i = 0;
 		let char = 0;
+		let chunkLength = chunk.length;
 
-		while (i < chunk.length) {
+		while (i < chunkLength) {
 			char = chunk[i];
 
 			switch (state) {
 				case TEXT:
-					// Fast forward to the next tag
-					while (char !== START_NODE) {
-						char = chunk[++i];
+					if (char === START_NODE) {
+						state = BEFORE_OPEN_TAG;
 					}
-
-					state = BEFORE_TAG_NAME;
 					break;
-				case BEFORE_TAG_NAME:
-					if (isWhitespace(char)) {
-						state = TEXT; // < name> // INVALID HTML5
-					} else if (char === CLOSE_NODE) {
-						state = TEXT; // <  > ???? // INVALID HTML5
+				case BEFORE_OPEN_TAG:
+					if ((char >= CAPITAL_A && char <= CAPITAL_Z) || (char >= LOWERCASE_A && char <= LOWERCASE_Z)) {
+						name = String.fromCharCode(char | 0x20); // Lowercase
+						state = OPENING_TAG; // <name
 					} else if (char === SLASH) {
-						state = BEFORE_CLOSING_TAG_NAME; // </name>
+						state = CLOSING_TAG; // </name
+						name = "";
+					} else if (char === START_NODE) {
+						state = BEFORE_OPEN_TAG; // << - Treat the first '<' as text
+					} else if (char === EXCLAMATION) {
+						state = OPENING_SPECIAL; // <! - Special tag
+					} else if (char === QUESTION) {
+						state = IN_SHORT_COMMENT; // <? - Short comment
 					} else {
-						state = IN_TAG_NAME; // <name>
-						name = String.fromCharCode(char);
+						state = TEXT; // <>
 					}
 					break;
-				case IN_TAG_NAME:
+				case OPENING_TAG:
 					if (isWhitespace(char)) {
-						state = IN_TAG; // <name   > || <name>
-
+						state = AFTER_OPENING_TAG; // <name   >
 						shouldPause = handleOpenTag(name);
 					} else if (char === CLOSE_NODE) {
 						state = TEXT; // <name>
@@ -112,66 +135,141 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 							shouldPause = handleCloseTag(name);
 						}
 					} else if (char === SLASH) {
-						state = IN_SELF_CLOSING_TAG; // <name/>
-
+						state = CLOSING_OPEN_TAG; // <name/
 						shouldPause = handleOpenTag(name);
 					} else {
-						name += String.fromCharCode(char);
+						name += String.fromCharCode(char | 0x20); // Lowercase
 					}
 					break;
-				case IN_TAG:
-					// Fast forward through all attributes
-					while (char !== CLOSE_NODE && char !== SLASH && i < chunk.length) {
-						char = chunk[++i];
-					}
-
+				case AFTER_OPENING_TAG:
 					if (char === CLOSE_NODE) {
-						state = TEXT; // <name **>
+						state = TEXT; // <name   >
 
 						if (isVoidElement(name)) {
 							shouldPause = handleCloseTag(name);
 						}
 					} else if (char === SLASH) {
-						state = IN_SELF_CLOSING_TAG; // <name **/>
+						state = CLOSING_OPEN_TAG; // <name   /
+					} else if (char === SINGLE_QUOTE) {
+						state = IN_VALUE_SINGLE_QUOTES;
+					} else if (char === DOUBLE_QUOTE) {
+						state = IN_VALUE_DOUBLE_QUOTES;
+					} else if (!isWhitespace(char)) {
+						state = IN_VALUE_NO_QUOTES;
 					}
 					break;
-				case BEFORE_CLOSING_TAG_NAME:
+				case IN_VALUE_NO_QUOTES:
 					if (char === CLOSE_NODE) {
-						state = TEXT; // </   >  INVALID HTML5
+						state = TEXT; // <div xxx>
+
+						if (isVoidElement(name)) {
+							shouldPause = handleCloseTag(name);
+							name = "";
+						}
+					} else if (char === SLASH) {
+						state = CLOSING_OPEN_TAG; // <div xxx/
+					} else if (char === EQUAL) {
+						state = AFTER_OPENING_TAG; /// <div xxx=
+					} else if (isWhitespace(char)) {
+						state = AFTER_OPENING_TAG;
+					}
+					break;
+				case IN_VALUE_SINGLE_QUOTES:
+					if (char === SINGLE_QUOTE) {
+						state = AFTER_OPENING_TAG; // <div xxx='yyy'>
+					}
+					break;
+				case IN_VALUE_DOUBLE_QUOTES:
+					if (char === DOUBLE_QUOTE) {
+						state = AFTER_OPENING_TAG; // <div xxx="yyy">
+					}
+					break;
+				case CLOSING_OPEN_TAG:
+					if (char === CLOSE_NODE) {
+						state = TEXT; // <name />
 
 						shouldPause = handleCloseTag(name);
 						name = "";
-					} else if (!isWhitespace(char)) {
-						state = IN_CLOSING_TAG_NAME; // </name>
-						name = String.fromCharCode(char);
+					} else {
+						state = AFTER_OPENING_TAG; // <name /...>
+						i--; // Re-process the character
 					}
 					break;
-				case IN_CLOSING_TAG_NAME:
+				case OPENING_SPECIAL:
+					if (char === DASH) {
+						state = OPENING_NORMAL_COMMENT; // <!-
+					} else if (char === CAPITAL_D || char === LOWERCASE_D) {
+						state = OPENING_DOCTYPE; // <!D
+						name = String.fromCharCode(char | 0x20); // Lowercase
+					} else {
+						state = IN_SHORT_COMMENT; // <!...
+					}
+					break;
+				case OPENING_DOCTYPE:
 					if (isWhitespace(char)) {
-						state = AFTER_CLOSING_TAG_NAME; // </name   >
+						if (name === "doctype") {
+							state = AFTER_OPENING_TAG; // <!DOCTYPE ...
+						} else {
+							state = IN_SHORT_COMMENT; // <!DOCXX...
+						}
+						// Validate the doctype and go to after open tag
+						// otherwise, ???
+					} else if (CLOSE_NODE) {
+						state = TEXT; // <!DOCTYPE> or <!DOCT>
+					} else {
+						name += String.fromCharCode(char | 0x20); // Lowercase
+					}
+					break;
+				case OPENING_NORMAL_COMMENT:
+					if (char === DASH) {
+						state = NORMAL_COMMENT_START; // <!--
+					} else {
+						state = IN_SHORT_COMMENT; // <!-
+					}
+					break;
+				case NORMAL_COMMENT_START:
+					if (char === CLOSE_NODE) {
+						state = TEXT; // <!-->
+					} else if (char === DASH) {
+						state = NORMAL_COMMENT_START; // <!--- ...
+					} else {
+						state = IN_NORMAL_COMMENT; // <!-- -
+					}
+					break;
+				case IN_NORMAL_COMMENT:
+					if (char === DASH) {
+						state = CLOSING_NORMAL_COMMENT; // <!-- ... -
+					}
+					break;
+				case IN_SHORT_COMMENT:
+					if (char === CLOSE_NODE) {
+						state = TEXT; // <? ... >
+					}
+					break;
+				case CLOSING_NORMAL_COMMENT:
+					if (char === DASH) {
+						state = CLOSING_NORMAL_COMMENT_2; // <!-- ... --
+					} else {
+						state = IN_NORMAL_COMMENT; // <!-- ... - ...
+					}
+					break;
+				case CLOSING_NORMAL_COMMENT_2:
+					if (char === DASH) {
+						state = CLOSING_NORMAL_COMMENT_2; // <!-- ... ----
 					} else if (char === CLOSE_NODE) {
+						state = TEXT; // <!-- ... -->
+					} else {
+						state = IN_NORMAL_COMMENT; // <!-- ... --x
+					}
+					break;
+				case CLOSING_TAG:
+					if (char === CLOSE_NODE) {
 						state = TEXT; // </name>
 
 						shouldPause = handleCloseTag(name);
 						name = "";
 					} else {
-						name += String.fromCharCode(char); // </name
-					}
-					break;
-				case AFTER_CLOSING_TAG_NAME:
-					if (char === CLOSE_NODE) {
-						state = TEXT; // </name   >
-
-						shouldPause = handleCloseTag(name);
-						name = "";
-					}
-					break;
-				case IN_SELF_CLOSING_TAG:
-					if (char === CLOSE_NODE) {
-						state = TEXT; // <name/>
-
-						shouldPause = handleCloseTag(name);
-						name = "";
+						name += String.fromCharCode(char | 0x20); // Lowercase
 					}
 					break;
 				default:

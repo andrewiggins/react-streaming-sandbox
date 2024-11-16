@@ -15,59 +15,102 @@ describe("createParser", () => {
 		return false;
 	}
 
+	interface TestCase {
+		title: string;
+		html: string;
+		openingTags: string[];
+		closingTags: string[];
+	}
+
+	function runtTest({ html, openingTags, closingTags }: TestCase) {
+		const parseChunk = createParser(handleOpenTag, handleCloseTag);
+		parseChunk(Buffer.from(html));
+
+		expect(opened).toEqual(openingTags);
+		expect(closed).toEqual(closingTags);
+	}
+
 	beforeEach(() => {
 		opened.length = 0;
 		closed.length = 0;
 	});
 
-	it("should parse basic HTML", () => {
-		const parseChunk = createParser(handleOpenTag, handleCloseTag);
-		const html = "<html><body><div>Test</div></body></html>";
-		parseChunk(Buffer.from(html));
-
-		expect(opened).toEqual(["html", "body", "div"]);
-		expect(closed).toEqual(["div", "body", "html"]);
-	});
-
-	it("should handle self-closing tags", () => {
-		const parseChunk = createParser(handleOpenTag, handleCloseTag);
-		const html = '<html><body><img src="test.jpg" /></body></html>';
-		parseChunk(Buffer.from(html));
-
-		expect(opened).toEqual(["html", "body", "img"]);
-		expect(closed).toEqual(["img", "body", "html"]);
-	});
-
-	it("should handle void tags", () => {
-		const parseChunk = createParser(handleOpenTag, handleCloseTag);
-		const html = "<html><head><meta><link></head><body><br></body></html>";
-		parseChunk(Buffer.from(html));
-
-		expect(opened).toEqual(["html", "head", "meta", "link", "body", "br"]);
-		expect(closed).toEqual(["meta", "link", "head", "br", "body", "html"]);
-	});
-
-	it("should handle tags with attributes and whitespace", () => {
-		const parseChunk = createParser(handleOpenTag, handleCloseTag);
-		const html = `
-      <html lang="en">
-        <head>
-          <meta charset="utf-8">
-          <link rel='stylesheet' href='/stylesheet'>
-        </head>
-        <body>
-          <div class="test">
-            Test
-          </div>
-          <script type="text/javascript">
-            console.log('Hello, World!');
-          </script>
-        </body>
-      </html>`;
-
-		parseChunk(Buffer.from(html));
-
-		expect(opened).toEqual(["html", "head", "meta", "link", "body", "div", "script"]);
-		expect(closed).toEqual(["meta", "link", "head", "div", "script", "body", "html"]);
+	[
+		{
+			title: "should parse basic HTML",
+			html: "<html><body><div>Test</div></body></html>",
+			openingTags: ["html", "body", "div"],
+			closingTags: ["div", "body", "html"],
+		},
+		{
+			title: "should handle self-closing tags",
+			html: '<html><body><img src="test.jpg" /></body></html>',
+			openingTags: ["html", "body", "img"],
+			closingTags: ["img", "body", "html"],
+		},
+		{
+			title: "should handle self closing body",
+			html: "<html><body /></html>",
+			openingTags: ["html", "body"],
+			closingTags: ["body", "html"],
+		},
+		{
+			title: "should handle void tags",
+			html: "<html><head><meta><link></head><body><br></body></html>",
+			openingTags: ["html", "head", "meta", "link", "body", "br"],
+			closingTags: ["meta", "link", "head", "br", "body", "html"],
+		},
+		{
+			title: "should handle tags with attributes and whitespace",
+			html: `
+				<html lang="en">
+					<head>
+						<meta charset="utf-8">
+						<link rel='stylesheet' href='/stylesheet'>
+					</head>
+					<body>
+						<div class="test">
+							Test
+						</div>
+						<script type="text/javascript">
+							console.log('Hello, World!');
+						</script>
+					</body>
+				</html>`,
+			openingTags: ["html", "head", "meta", "link", "body", "div", "script"],
+			closingTags: ["meta", "link", "head", "div", "script", "body", "html"],
+		},
+		{
+			title: "should handle not quoted attributes",
+			html: `
+				<html lang=en>
+					<body>
+						<div class=test>Test</div>
+						<script type=text/javascript></script>
+						<span =text/javascript></span>
+						<b><br text/javascript /></b>
+						<p><meta text/>javascript/></p>
+					</body>
+				</html>`,
+			openingTags: ["html", "body", "div", "script", "span", "b", "br", "p", "meta"],
+			closingTags: ["div", "script", "span", "br", "b", "meta", "p", "body", "html"],
+		},
+		{
+			title: "should handle comments",
+			html: `
+				<html>
+					<div><!-- > Test </--></div>
+					<p><!--></p>
+					<?>
+					<img src="test.jpg">
+					<?php echo 'Hello, World!'; ?>
+				</html>`,
+			openingTags: ["html", "div", "p", "img"],
+			closingTags: ["div", "p", "img", "html"],
+		},
+	].map((testCase) => {
+		it(testCase.title, () => {
+			runtTest(testCase);
+		});
 	});
 });
