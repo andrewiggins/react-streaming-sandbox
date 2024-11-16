@@ -22,7 +22,8 @@
     "format:check": "prettier --no-error-on-unmatched-pattern --check **/*.{js,jsx,ts,tsx,css,md,html,yml,yaml,json}",
     "lint-staged": "lint-staged",
     "lint": "npm run tsc && npm run format:check",
-    "lint:fix": "npm run format"
+    "lint:fix": "npm run format",
+    "test": "node --test --experimental-strip-types ./server/__tests__/html-stream-parser.test.ts"
   },
   "devDependencies": {
     "@types/debug": "^4.1.12",
@@ -46,7 +47,7 @@
     ]
   },
   "volta": {
-    "node": "20.12.1"
+    "node": "22.11.0"
   },
   "dependencies": {
     "debug": "^4.3.4",
