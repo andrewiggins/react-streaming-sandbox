@@ -126,17 +126,13 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 				case OPENING_TAG:
 					if (isWhitespace(char)) {
 						state = AFTER_OPENING_TAG; // <name   >
-						shouldPause = handleOpenTag(name);
 					} else if (char === CLOSE_NODE) {
 						state = TEXT; // <name>
 
-						shouldPause = handleOpenTag(name);
-						if (isVoidElement(name)) {
-							shouldPause = handleCloseTag(name);
-						}
+						shouldPause = isVoidElement(name) ? handleCloseTag(name) : handleOpenTag(name);
+						name = "";
 					} else if (char === SLASH) {
 						state = CLOSING_OPEN_TAG; // <name/
-						shouldPause = handleOpenTag(name);
 					} else {
 						name += String.fromCharCode(char | 0x20); // Lowercase
 					}
@@ -145,9 +141,8 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 					if (char === CLOSE_NODE) {
 						state = TEXT; // <name   >
 
-						if (isVoidElement(name)) {
-							shouldPause = handleCloseTag(name);
-						}
+						shouldPause = isVoidElement(name) ? handleCloseTag(name) : handleOpenTag(name);
+						name = "";
 					} else if (char === SLASH) {
 						state = CLOSING_OPEN_TAG; // <name   /
 					} else if (char === SINGLE_QUOTE) {
@@ -162,10 +157,8 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 					if (char === CLOSE_NODE) {
 						state = TEXT; // <div xxx>
 
-						if (isVoidElement(name)) {
-							shouldPause = handleCloseTag(name);
-							name = "";
-						}
+						shouldPause = isVoidElement(name) ? handleCloseTag(name) : handleOpenTag(name);
+						name = "";
 					} else if (char === SLASH) {
 						state = CLOSING_OPEN_TAG; // <div xxx/
 					} else if (char === EQUAL) {

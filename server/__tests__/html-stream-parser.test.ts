@@ -108,6 +108,50 @@ describe("createParser", () => {
 			openingTags: ["html", "div", "p", "img"],
 			closingTags: ["div", "p", "img", "html"],
 		},
+		{
+			title: "should handle CDATA",
+			html: `
+				<html>
+					<script>
+						<![CDATA[
+							console.log('Hello, World!');
+						]]>
+					</script>
+				</html>`,
+			openingTags: ["html", "script"],
+			closingTags: ["script", "html"],
+		},
+		{
+			title: "should handle script and style tags with complex content",
+			html: `
+				<html>
+					<script>
+						console.log("</html>");
+					</script>
+					<head>
+						<style>
+							.test {
+								color: red;
+							}
+							/** </head> **/
+						</style>
+					</head>
+				</html>`,
+			openingTags: ["html", "script", "head", "style"],
+			closingTags: ["script", "style", "head", "html"],
+		},
+		{
+			title: "should handle doctype",
+			html: `
+				<!DoCtYpE html>
+				<html>
+					<body>
+						<div>Test</div>
+					</body>
+				</html>`,
+			openingTags: ["html", "body", "div"],
+			closingTags: ["div", "body", "html"],
+		},
 	].map((testCase) => {
 		it(testCase.title, () => {
 			runtTest(testCase);
