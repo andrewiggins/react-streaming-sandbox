@@ -126,6 +126,7 @@ describe("createParser", () => {
 			html: `
 				<html>
 					<script>
+						console.log('<strong>Hello, World!</strong>');
 						console.log("</html>");
 					</script>
 					<head>
@@ -151,6 +152,64 @@ describe("createParser", () => {
 				</html>`,
 			openingTags: ["html", "body", "div"],
 			closingTags: ["div", "body", "html"],
+		},
+		{
+			title: "real world example 1",
+			html: `
+			<!DOCTYPE html>
+			<html>
+				<head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# githubog: http://ogp.me/ns/fb/githubog#">
+					<meta charset='utf-8'>
+					<meta http-equiv="X-UA-Compatible" content="IE=edge">
+							<title>The Revolution Will Be Forked · GitHub</title>
+					<link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="GitHub" />
+					<link rel="fluid-icon" href="https://github.com/fluidicon.png" title="GitHub" />
+				</head>
+			</html>`,
+			openingTags: ["html", "head", "meta", "meta", "title", "link", "link"],
+			closingTags: ["meta", "meta", "title", "link", "link", "head", "html"],
+		},
+		{
+			title: "script tags with unquoted src attributes",
+			html: `
+				<ul class="companion" id="on-air-links">
+						<li class="listen"><a class="btn-news" href="/streaming-upr-live" target="_blank">UPR NEWS</a></li>
+						<li class="now-playing"><span class="label">On Air Now:</span><SCRIPT LANGUAGE="JavaScript" SRC=http://www.publicbroadcasting.net/upr/guide.guidenocode?fetch=1,0,0,1,0,0></SCRIPT></li>
+						<li class="listen"><a class="btn-music" href="/streaming-upr-too" target="_blank">UPR Too</a></li>
+						<li class="now-playing"><span class="label">On Air Now:</span><SCRIPT LANGUAGE="JavaScript" SRC=http://www.publicbroadcasting.net/upr-hd2/guide.guidenocode?fetch=1,0,0,1,0,0></script>
+				</li>
+					</ul>`,
+			openingTags: ["ul", "li", "a", "li", "span", "script", "li", "a", "li", "span", "script"],
+			closingTags: ["a", "li", "span", "script", "li", "a", "li", "span", "script", "li", "ul"],
+		},
+		{
+			title: "cursed CDATA comments",
+			html: `
+				<script type="text/javascript" src="http://www.upr.org/sites/all/modules/contrib/disqus/disqus.js?mnyaav"></script>
+				<script type="text/javascript">
+				<!--//--><![CDATA[//><!--
+				var disqus_shortname = 'upr';
+				//--><!]]>
+				</script>
+				<script type="text/javascript">
+				<!--//--><![CDATA[//><!--
+				console.log('Hello, World!');
+				//--><!]]>
+				</script>
+				<script type="text/javascript" src="http://s7.addthis.com/js/250/addthis_widget.js#pubid=ra-4e09f49f6fe84d1e"></script>
+				<script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+				<script type="text/javascript">
+				<!--//--><![CDATA[//><!--
+				var _gaq = _gaq || [];
+				//--><!]]>
+				</script>
+				<script type="text/javascript">
+				<!--//--><![CDATA[//><!--
+				console.log('Hello, World!');
+				//--><!]]>
+				</script>`,
+			openingTags: ["script", "script", "script", "script", "script", "script", "script"],
+			closingTags: ["script", "script", "script", "script", "script", "script", "script"],
 		},
 	].map((testCase) => {
 		it(testCase.title, () => {
