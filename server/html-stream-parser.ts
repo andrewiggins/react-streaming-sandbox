@@ -18,7 +18,6 @@ import { Transform } from "node:stream";
 /** @import { TransformCallback } from "node:stream"; */
 
 // The parser states
-// The parser states
 const TEXT = 0;
 const BEFORE_OPEN_TAG = 1;
 const OPENING_TAG = 2;
@@ -53,16 +52,7 @@ const CAPITAL_A = 65; // A
 const CAPITAL_D = 68; // D
 const CAPITAL_Z = 90; // Z
 const LOWERCASE_A = 97; // a
-const LOWERCASE_C = 99; // c
 const LOWERCASE_D = 100; // d
-const LOWERCASE_E = 101; // e
-const LOWERCASE_I = 105; // i
-const LOWERCASE_L = 108; // l
-const LOWERCASE_P = 112; // p
-const LOWERCASE_R = 114; // r
-const LOWERCASE_S = 115; // s
-const LOWERCASE_T = 116; // t
-const LOWERCASE_Y = 121; // y
 const LOWERCASE_Z = 122; // z
 
 const isWhitespace = (c: number) =>
@@ -99,41 +89,32 @@ type ParseChunk = (chunk: Buffer) => number;
 export function createParser(handleOpenTag: (name: string) => boolean, handleCloseTag: (name: string) => boolean): ParseChunk {
 	let state: number = TEXT;
 	let name: string = "";
-	let inScriptOrStyle: string | null = null;
+	/**
+	 * Any parent tag that puts the parser into "CDATA" mode, meaning that the
+	 * parser will treat all contents as text until an exact matching closing tag
+	 * is found
+	 */
+	let parentCdataTag: string | null = null;
 
 	function emitOpenTag(name: string, isSelfClosing: boolean) {
 		let shouldPause = handleOpenTag(name);
-		if (name === "script" || name === "style") {
-			inScriptOrStyle = name;
+		if (name === "script" || name === "style" || name === "textarea") {
+			parentCdataTag = name;
 		}
 
 		if (isSelfClosing || isVoidElement(name)) {
 			shouldPause ||= handleCloseTag(name);
-			inScriptOrStyle = null;
+			parentCdataTag = null;
 		}
 
 		return shouldPause;
 	}
 
-	function possiblyClosesScriptOrStyle(char: number) {
-		char |= 0x20; // Lowercase
-		if (inScriptOrStyle == "script") {
-			return (
-				char === LOWERCASE_S ||
-				char === LOWERCASE_C ||
-				char === LOWERCASE_R ||
-				char === LOWERCASE_I ||
-				char === LOWERCASE_P ||
-				char === LOWERCASE_T
-			);
-		} else if (inScriptOrStyle == "style") {
-			return char === LOWERCASE_S || char === LOWERCASE_T || char === LOWERCASE_Y || char === LOWERCASE_L || char === LOWERCASE_E;
-		}
-
-		return false;
+	function isAlpha(c: number) {
+		return (c >= CAPITAL_A && c <= CAPITAL_Z) || (c >= LOWERCASE_A && c <= LOWERCASE_Z);
 	}
 
-	return function parseChunk(chunk: Buffer) {
+	return function parseChunk(chunk: Buffer): number {
 		let shouldPause = false;
 		let i = 0;
 		let char = 0;
@@ -149,14 +130,14 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 					}
 					break;
 				case BEFORE_OPEN_TAG:
-					if (inScriptOrStyle) {
+					if (parentCdataTag) {
 						if (char === SLASH) {
 							state = CLOSING_TAG; // </ - Possible closing tag for the script or style tag
 							name = "";
 						} else {
 							state = TEXT; // < - Not a closing tag, go back to text
 						}
-					} else if ((char >= CAPITAL_A && char <= CAPITAL_Z) || (char >= LOWERCASE_A && char <= LOWERCASE_Z)) {
+					} else if (isAlpha(char)) {
 						// Only A-Z and a-z are valid start to tag names in HTML5
 						name = String.fromCharCode(char | 0x20); // Lowercase
 						state = OPENING_TAG; // <name
@@ -306,21 +287,21 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 					}
 					break;
 				case CLOSING_TAG:
-					if (inScriptOrStyle) {
+					if (parentCdataTag) {
 						if (char === START_NODE) {
 							state = BEFORE_OPEN_TAG; // </< - First `</` wasn't a closing tag, but this next `<` could be
 						} else if (char === CLOSE_NODE) {
 							// Check if the closing tag is for the script or style tag
-							if (name === inScriptOrStyle) {
+							if (name === parentCdataTag) {
 								state = TEXT; // </script>
 
 								shouldPause = handleCloseTag(name);
 								name = "";
-								inScriptOrStyle = null;
+								parentCdataTag = null;
 							} else {
 								state = TEXT; // </name> but not for the script or style tag
 							}
-						} else if (possiblyClosesScriptOrStyle(char)) {
+						} else if (isAlpha(char)) {
 							name += String.fromCharCode(char | 0x20); // Lowercase
 						} else {
 							state = TEXT; // </scrXXX or </styXXX

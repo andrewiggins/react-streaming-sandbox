@@ -211,6 +211,15 @@ describe("createParser", () => {
 			openingTags: ["script", "script", "script", "script", "script", "script", "script"],
 			closingTags: ["script", "script", "script", "script", "script", "script", "script"],
 		},
+		{
+			title: "does not parse the contents of a <textarea> tag",
+			html: `
+				<textarea>
+					<div>Test</div>
+				</textarea>`,
+			openingTags: ["textarea"],
+			closingTags: ["textarea"],
+		},
 	].map((testCase) => {
 		it(testCase.title, () => {
 			runtTest(testCase);
