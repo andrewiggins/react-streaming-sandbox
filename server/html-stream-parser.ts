@@ -129,7 +129,11 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 					} else if (char === CLOSE_NODE) {
 						state = TEXT; // <name>
 
-						shouldPause = isVoidElement(name) ? handleCloseTag(name) : handleOpenTag(name);
+						shouldPause = handleOpenTag(name);
+						if (isVoidElement(name)) {
+							shouldPause ||= handleCloseTag(name);
+						}
+
 						name = "";
 					} else if (char === SLASH) {
 						state = CLOSING_OPEN_TAG; // <name/
@@ -141,7 +145,11 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 					if (char === CLOSE_NODE) {
 						state = TEXT; // <name   >
 
-						shouldPause = isVoidElement(name) ? handleCloseTag(name) : handleOpenTag(name);
+						shouldPause = handleOpenTag(name);
+						if (isVoidElement(name)) {
+							shouldPause ||= handleCloseTag(name);
+						}
+
 						name = "";
 					} else if (char === SLASH) {
 						state = CLOSING_OPEN_TAG; // <name   /
@@ -157,7 +165,11 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 					if (char === CLOSE_NODE) {
 						state = TEXT; // <div xxx>
 
-						shouldPause = isVoidElement(name) ? handleCloseTag(name) : handleOpenTag(name);
+						shouldPause = handleOpenTag(name);
+						if (isVoidElement(name)) {
+							shouldPause ||= handleCloseTag(name);
+						}
+
 						name = "";
 					} else if (char === SLASH) {
 						state = CLOSING_OPEN_TAG; // <div xxx/
@@ -181,7 +193,8 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 					if (char === CLOSE_NODE) {
 						state = TEXT; // <name />
 
-						shouldPause = handleCloseTag(name);
+						shouldPause = handleOpenTag(name);
+						shouldPause ||= handleCloseTag(name);
 						name = "";
 					} else {
 						state = AFTER_OPENING_TAG; // <name /...>
