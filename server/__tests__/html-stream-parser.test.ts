@@ -220,6 +220,60 @@ describe("createParser", () => {
 			openingTags: ["textarea"],
 			closingTags: ["textarea"],
 		},
+		{
+			title: "Improperly spaced attributes",
+			html: `
+			<div id="tr-elektron">
+			<div class="tr-header1"><a href="URL" onclick="dcsMultiTrack('a','b','c.d','/','WT.ti','Offsite: e.com','WT.dl','24','WT.z_offsite','http://www.test.com/');"OnClick="dcsMultiTrack('DCS.dcssip','test.com','DCS.dcsuri','/','WT.ti','Offsite: test.com','WT.dl','24','WT.z_offsite','test');"></a></div>
+			<div class="tr-descr">An ultra-low latency infrastructure for electronic trading and data distribution</div>
+			</div>`,
+			openingTags: ["div", "div", "a", "div"],
+			closingTags: ["a", "div", "div", "div"],
+		},
+		{
+			title: "Incomplete attributes",
+			html: `
+				<div class="HTlogo HTSectionName"><span id="ctl00_lblsectionname"><a href=>news</a></span></div>
+				<div class="TopMenuTab"><div " " id="submenu_7"style="position:absolute;z-index:20;display:none;" class="menuover"></div></div>`,
+			openingTags: ["div", "span", "a", "div", "div"],
+			closingTags: ["a", "span", "div", "div", "div"],
+		},
+		{
+			title: "Improper attributes",
+			html: `
+			<ul>
+				<li>
+					<a
+						class="mostreadheadings"
+						onclick="javascript:htTracker._trackEvent('MostRead', 'Stories', 'http://test.com');"
+						href='http://test.com' + ""
+					>
+						Article Title
+					</a>
+					<img src="http://i.telegraph.co.uk/multimedia/archive/02621/mars_2621828b.jpg" width="620" height="387" alt="Mars' atmosphere destroyed by "catastrophic" event four billion years ago "/>
+				</li>
+			</ul>`,
+			openingTags: ["ul", "li", "a", "img"],
+			closingTags: ["a", "img", "li", "ul"],
+		},
+		{
+			title: "Double quoted attributes can contain special characters",
+			html: `<div class="<span a=a b='c'></span>"></div>`,
+			openingTags: ["div"],
+			closingTags: ["div"],
+		},
+		{
+			title: "Single quoted attributes can contain special characters",
+			html: `<div class='<span a=a b="c"></span>'></div>`,
+			openingTags: ["div"],
+			closingTags: ["div"],
+		},
+		{
+			title: "Unquoted quoted attributes can contain the equals and quotes character",
+			html: `<div a=b="c><span></span></div>`,
+			openingTags: ["div", "span"],
+			closingTags: ["span", "div"],
+		},
 	].map((testCase) => {
 		it(testCase.title, () => {
 			runtTest(testCase);
