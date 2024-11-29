@@ -91,9 +91,13 @@ function isVoidElement(name: string): boolean {
 	);
 }
 
+function isASCIIAlpha(c: number) {
+	return (c >= CAPITAL_A && c <= CAPITAL_Z) || (c >= LOWERCASE_A && c <= LOWERCASE_Z);
+}
+
 type ParseChunk = (chunk: Buffer) => number;
 
-export function createParser(handleOpenTag: (name: string) => boolean, handleCloseTag: (name: string) => boolean): ParseChunk {
+export function createParser(handleOpenTag?: (name: string) => boolean, handleCloseTag?: (name: string) => boolean): ParseChunk {
 	let state: number = TEXT;
 	let name: string = "";
 	/**
@@ -104,21 +108,17 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 	let parentCdataTag: string | null = null;
 
 	function emitOpenTag(name: string, isSelfClosing: boolean) {
-		let shouldPause = handleOpenTag(name);
+		let shouldPause = handleOpenTag?.(name) ?? false;
 		if (name === "script" || name === "style" || name === "textarea") {
 			parentCdataTag = name;
 		}
 
 		if (isSelfClosing || isVoidElement(name)) {
-			shouldPause ||= handleCloseTag(name);
+			shouldPause ||= handleCloseTag?.(name) ?? false;
 			parentCdataTag = null;
 		}
 
 		return shouldPause;
-	}
-
-	function isASCIIAlpha(c: number) {
-		return (c >= CAPITAL_A && c <= CAPITAL_Z) || (c >= LOWERCASE_A && c <= LOWERCASE_Z);
 	}
 
 	return function parseChunk(chunk: Buffer): number {
@@ -322,7 +322,7 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 							if (name === parentCdataTag) {
 								state = TEXT; // </script>
 
-								shouldPause = handleCloseTag(name);
+								shouldPause = handleCloseTag?.(name) ?? false;
 								name = "";
 								parentCdataTag = null;
 							} else {
@@ -336,7 +336,7 @@ export function createParser(handleOpenTag: (name: string) => boolean, handleClo
 					} else if (char === CLOSE_NODE) {
 						state = TEXT; // </name>
 
-						shouldPause = handleCloseTag(name);
+						shouldPause = handleCloseTag?.(name) ?? false;
 						name = "";
 					} else {
 						name += String.fromCharCode(char | 0x20); // Lowercase
