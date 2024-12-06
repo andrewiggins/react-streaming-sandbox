@@ -358,43 +358,16 @@ export function createParser(handleOpenTag?: (name: string) => boolean, handleCl
 }
 
 // The parser class
-export class HtmlStreamParser extends Transform {
-	private bodyDepth = -1;
-
+type Handler = (name: string) => boolean;
+export class HTMLStreamingParser extends Transform {
 	private pendingChunk: Buffer | null = null;
 
 	private parseChunk: ParseChunk;
 
-	public isDirectChildOfBody = false;
-
-	constructor() {
+	constructor(handleOpenTag?: Handler, handleCloseTag?: Handler) {
 		super();
-		this.parseChunk = createParser(this.handleOpenTag, this.handleCloseTag);
+		this.parseChunk = createParser(handleOpenTag, handleCloseTag);
 	}
-
-	handleOpenTag = (name: string) => {
-		if (name === "body") {
-			this.bodyDepth = 0;
-			this.isDirectChildOfBody = true;
-		} else if (this.bodyDepth >= 0) {
-			this.bodyDepth++;
-			this.isDirectChildOfBody = false;
-		}
-
-		return this.isDirectChildOfBody;
-	};
-
-	handleCloseTag = (name: string) => {
-		if (name === "body") {
-			this.bodyDepth = -1;
-			this.isDirectChildOfBody = false;
-		} else if (this.bodyDepth >= 0) {
-			this.bodyDepth--;
-			this.isDirectChildOfBody = this.bodyDepth === 0;
-		}
-
-		return this.isDirectChildOfBody;
-	};
 
 	processPendingChunk() {
 		if (this.pendingChunk == null) {
@@ -430,4 +403,40 @@ export class HtmlStreamParser extends Transform {
 		this.processPendingChunk();
 		callback();
 	}
+}
+
+export function createInsertIntoBodyStream(shellReady?: Promise<void>): HTMLStreamingParser {
+	let bodyDepth: number = 0;
+	let isDirectChildOfBody: boolean = false;
+	let isShellReady: boolean = shellReady ? false : true;
+
+	shellReady?.then(() => {
+		isShellReady = true;
+	});
+
+	const handleOpenTag = (name: string) => {
+		if (name === "body") {
+			bodyDepth = 0;
+			isDirectChildOfBody = true;
+		} else if (bodyDepth >= 0) {
+			bodyDepth++;
+			isDirectChildOfBody = false;
+		}
+
+		return isShellReady && isDirectChildOfBody;
+	};
+
+	const handleCloseTag = (name: string) => {
+		if (name === "body") {
+			bodyDepth = -1;
+			isDirectChildOfBody = false;
+		} else if (bodyDepth >= 0) {
+			bodyDepth--;
+			isDirectChildOfBody = bodyDepth === 0;
+		}
+
+		return isShellReady && isDirectChildOfBody;
+	};
+
+	return new HTMLStreamingParser(handleOpenTag, handleCloseTag);
 }
